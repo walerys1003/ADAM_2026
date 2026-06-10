@@ -156,7 +156,7 @@ class _FamilyHealthReportScreenState extends State<FamilyHealthReportScreen> {
                 'Status ogólny',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white),
               ),
-              SemaforBadge(level: 'GREEN', size: 20),
+              SemaforBadge(semafor: 'GREEN', size: 20),
             ],
           ),
           const SizedBox(height: 16),
@@ -193,17 +193,17 @@ class _FamilyHealthReportScreenState extends State<FamilyHealthReportScreen> {
         children: [
           Row(
             children: [
-              Expanded(child: StatCard(icon: Icons.favorite, label: 'Śr. tętno', value: '71 BPM', color: const Color(0xFFFF6B6B), subtitle: 'spoczynkowe: 64')),
+              Expanded(child: StatCard(icon: Icons.favorite, title: 'Śr. tętno', value: '71 BPM', color: const Color(0xFFFF6B6B), subtitle: 'spoczynkowe: 64')),
               const SizedBox(width: 12),
-              Expanded(child: StatCard(icon: Icons.air, label: 'SpO2', value: '96%', color: const Color(0xFF45B7D1), subtitle: 'min: 93%')),
+              Expanded(child: StatCard(icon: Icons.air, title: 'SpO2', value: '96%', color: const Color(0xFF45B7D1), subtitle: 'min: 93%')),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: StatCard(icon: Icons.thermostat, label: 'Temp.', value: '36.5°C', color: const Color(0xFFFFD93D), subtitle: 'w normie')),
+              Expanded(child: StatCard(icon: Icons.thermostat, title: 'Temp.', value: '36.5°C', color: const Color(0xFFFFD93D), subtitle: 'w normie')),
               const SizedBox(width: 12),
-              Expanded(child: StatCard(icon: Icons.monitor_heart, label: 'Ciśnienie', value: '128/82', color: const Color(0xFF6C5CE7), subtitle: 'optymalne')),
+              Expanded(child: StatCard(icon: Icons.monitor_heart, title: 'Ciśnienie', value: '128/82', color: const Color(0xFF6C5CE7), subtitle: 'optymalne')),
             ],
           ),
         ],
@@ -291,7 +291,7 @@ class _FamilyHealthReportScreenState extends State<FamilyHealthReportScreen> {
               Expanded(
                 child: StatCard(
                   icon: Icons.bedtime,
-                  label: 'Średnio',
+                  title: 'Średnio',
                   value: '7.5h',
                   color: const Color(0xFF96CEB4),
                   subtitle: 'na dobę',
@@ -301,7 +301,7 @@ class _FamilyHealthReportScreenState extends State<FamilyHealthReportScreen> {
               Expanded(
                 child: StatCard(
                   icon: Icons.star,
-                  label: 'Jakość',
+                  title: 'Jakość',
                   value: '78/100',
                   color: const Color(0xFFFFD93D),
                   subtitle: 'dobra',

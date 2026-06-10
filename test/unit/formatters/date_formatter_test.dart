@@ -38,27 +38,27 @@ void main() {
     });
 
     group('formatRelative', () {
-      test('returns "Dzisiaj" for today', () {
-        final today = DateTime.now();
-        final result = DateFormatter.formatRelative(today);
-        expect(result, 'Dzisiaj');
+      test('returns relative time for recent dates', () {
+        final justNow = DateTime.now().subtract(const Duration(minutes: 5));
+        final result = DateFormatter.formatRelative(justNow.toIso8601String());
+        expect(result, '5 min temu');
       });
 
-      test('returns "Wczoraj" for yesterday', () {
-        final yesterday = DateTime.now().subtract(const Duration(days: 1));
-        final result = DateFormatter.formatRelative(yesterday);
-        expect(result, 'Wczoraj');
+      test('returns hours ago for older today', () {
+        final hoursAgo = DateTime.now().subtract(const Duration(hours: 3));
+        final result = DateFormatter.formatRelative(hoursAgo.toIso8601String());
+        expect(result, contains('h temu'));
       });
 
-      test('returns "X dni temu" for recent dates', () {
+      test('returns days ago for recent dates', () {
         final threeDaysAgo = DateTime.now().subtract(const Duration(days: 3));
-        final result = DateFormatter.formatRelative(threeDaysAgo);
+        final result = DateFormatter.formatRelative(threeDaysAgo.toIso8601String());
         expect(result, contains('dni temu'));
       });
 
       test('returns formatted date for older dates', () {
         final oldDate = DateTime.now().subtract(const Duration(days: 30));
-        final result = DateFormatter.formatRelative(oldDate);
+        final result = DateFormatter.formatRelative(oldDate.toIso8601String());
         expect(result, contains('.'));
       });
     });

@@ -147,7 +147,7 @@ class PdfExportService {
   Future<List<Map<String, dynamic>>> _getHealthRecords(String seniorId) async {
     try {
       final data = await _supabase.getHealthRecords(seniorId, limit: 200);
-      return data ?? [];
+      return data;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('Failed to fetch health records: $e');
@@ -159,7 +159,10 @@ class PdfExportService {
   Future<List<Map<String, dynamic>>> _getMedications(String seniorId) async {
     try {
       final data = await _supabase.getMedications(seniorId);
-      return data ?? [];
+      return data.map((m) => {
+        'id': m.id, 'name': m.name, 'dosage': m.dosage,
+        'frequency': m.frequency, 'isActive': m.isActive,
+      }).toList();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('Failed to fetch medications: $e');
@@ -172,8 +175,8 @@ class PdfExportService {
       String seniorId) async {
     try {
       final data =
-          await _supabase.getConversations(seniorId, limit: 50);
-      return data ?? [];
+          await _supabase.getConversations(seniorId: seniorId, limit: 50);
+      return data.map((c) => c.toJson()).toList();
     } catch (e) {
       if (kDebugMode) {
         debugPrint('Failed to fetch conversations: $e');

@@ -32,4 +32,31 @@ class DateFormatter {
     if (now.difference(dt).inDays == 1) return 'Wczoraj, ${time(dt)}';
     return '${polish(dt)}, ${time(dt)}';
   }
+
+  // ── Aliases for backward compat ──
+  static String formatRelative(String iso) => relative(iso);
+  static String getWeekDay(DateTime dt) => dayName(dt);
+
+  // ── Additional formatters ──
+  static String formatDate(DateTime dt) =>
+      '${dt.day.toString().padLeft(2, '0')}.${dt.month.toString().padLeft(2, '0')}.${dt.year}';
+
+  static String formatDateTime(DateTime dt) =>
+      '${formatDate(dt)} ${time(dt)}';
+
+  static String formatTime(DateTime dt) => time(dt);
+
+  static String formatDuration(Duration d) {
+    if (d.inHours > 0) {
+      final min = d.inMinutes % 60;
+      return '${d.inHours}h${min > 0 ? ' ${min}min' : ''}';
+    }
+    if (d.inMinutes > 0) return '${d.inMinutes} min';
+    return '${d.inSeconds}s';
+  }
+
+  static bool isToday(DateTime dt) {
+    final now = DateTime.now();
+    return dt.year == now.year && dt.month == now.month && dt.day == now.day;
+  }
 }

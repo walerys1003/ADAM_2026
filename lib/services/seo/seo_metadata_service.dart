@@ -20,18 +20,19 @@ class SeoMetadataService {
     'twitter:site': '@SilverTechPL',
   };
 
-  final Map<String, String> _pageMeta = {};
+  final Map<String, Map<String, String>> _pageMeta = {};
 
   /// Get all meta tags for a specific page
   Map<String, String> getMetaTags(String page) {
     final tags = Map<String, String>.from(_defaultMeta);
-    tags.addAll(_pageMeta[page] ?? {});
+    final pageMeta = _pageMeta[page];
+    if (pageMeta != null) tags.addAll(pageMeta);
     return tags;
   }
 
   /// Set page-specific meta
   void setPageMeta(String page, Map<String, String> meta) {
-    _pageMeta[page] = meta;
+    _pageMeta[page] = Map<String, String>.from(meta);
   }
 
   /// Generate JSON-LD structured data for the landing page

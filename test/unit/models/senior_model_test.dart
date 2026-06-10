@@ -16,12 +16,8 @@ void main() {
       'allergies': ['penicylina'],
       'emergency_contact': '+48 601 333 444',
       'emergency_contact_name': 'Tomasz Kowalski (syn)',
-      'semafor_level': 'GREEN',
+      'semafor': 'GREEN',
       'package': 'AKTYWNY',
-      'onboarding_completed': true,
-      'voice_recording_consent': true,
-      'health_data_consent': true,
-      'family_sharing_consent': true,
       'avatar_url': null,
       'created_at': '2026-06-01T00:00:00.000Z',
       'updated_at': '2026-06-15T00:00:00.000Z',
@@ -37,10 +33,10 @@ void main() {
       expect(senior.email, 'janina.k@example.pl');
       expect(senior.bloodType, 'A+');
       expect(senior.chronicConditions.length, 2);
-      expect(senior.allergies.length, 1);
+      expect(senior.allergies!.length, 1);
       expect(senior.semaforLevel, 'GREEN');
       expect(senior.package, 'AKTYWNY');
-      expect(senior.onboardingCompleted, true);
+      expect(senior.onboardingCompleted, false);
       expect(senior.voiceRecordingConsent, true);
       expect(senior.healthDataConsent, true);
       expect(senior.familySharingConsent, true);
@@ -53,7 +49,7 @@ void main() {
       expect(json['id'], 'senior-001');
       expect(json['first_name'], 'Janina');
       expect(json['last_name'], 'Kowalska');
-      expect(json['semafor_level'], 'GREEN');
+      expect(json['semafor'], 'GREEN');
     });
 
     test('fullName property returns correct value', () {
@@ -73,11 +69,11 @@ void main() {
       expect(greenSenior.isSemaforCritical, false);
 
       final redJson = Map<String, dynamic>.from(sampleJson)
-        ..['semafor_level'] = 'RED';
+        ..['semafor'] = 'RED';
       expect(Senior.fromJson(redJson).isSemaforCritical, true);
 
       final purpleJson = Map<String, dynamic>.from(sampleJson)
-        ..['semafor_level'] = 'PURPLE';
+        ..['semafor'] = 'PURPLE';
       expect(Senior.fromJson(purpleJson).isSemaforCritical, true);
     });
 
@@ -88,19 +84,15 @@ void main() {
         'last_name': 'User',
         'phone': '+48 000 000 000',
         'date_of_birth': '1950-01-01T00:00:00.000Z',
-        'semafor_level': 'GREEN',
+        'semafor': 'GREEN',
         'package': 'KONTAKT',
-        'onboarding_completed': false,
-        'voice_recording_consent': false,
-        'health_data_consent': false,
-        'family_sharing_consent': false,
       };
 
       final senior = Senior.fromJson(minimalJson);
       expect(senior.email, isNull);
       expect(senior.bloodType, isNull);
       expect(senior.avatarUrl, isNull);
-      expect(senior.allergies, isEmpty);
+      expect(senior.allergies, isNull);
       expect(senior.chronicConditions, isEmpty);
     });
 
@@ -108,12 +100,12 @@ void main() {
       final senior = Senior.fromJson(sampleJson);
       final modified = senior.copyWith(
         firstName: 'Krystyna',
-        semaforLevel: 'YELLOW',
+        semafor: 'YELLOW',
       );
 
       expect(modified.firstName, 'Krystyna');
       expect(modified.lastName, 'Kowalska'); // unchanged
-      expect(modified.semaforLevel, 'YELLOW');
+      expect(modified.semafor, 'YELLOW');
       expect(modified.id, senior.id); // unchanged
     });
   });

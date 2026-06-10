@@ -46,6 +46,20 @@ class Medication {
             DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
       );
 
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'senior_id': seniorId,
+        'name': name,
+        'dosage': dosage,
+        'frequency': frequency,
+        'time_of_day': timeOfDay,
+        'instructions': instructions,
+        'start_date': startDate?.toIso8601String(),
+        'end_date': endDate?.toIso8601String(),
+        'is_active': isActive,
+        'created_at': createdAt.toIso8601String(),
+      };
+
   String get dosageFormatted => dosage != null ? '$name $dosage' : name;
   String get timeFormatted =>
       timeOfDay?.map((t) => '${t.substring(0, 5)}').join(', ') ?? '--';

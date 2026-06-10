@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 /// SilverTech Agent Adam - App Configuration
 /// Optimized stack for June 2026
 class AppConfig {
@@ -78,8 +80,21 @@ class AppConfig {
   };
 
   // ──────────────────────────────────────────────
+  // Brand Colors (backward compat aliases → AppTheme)
+  // ──────────────────────────────────────────────
+  static const Color brandNavy = Color(0xFF1E3A5F);
+  static const Color brandGold = Color(0xFFF5A623);
+  static const Color seniorBackgroundColor = Color(0xFFFAF8F5);
+
+  // ──────────────────────────────────────────────
   // Semafor Colors (4-level escalation)
   // ──────────────────────────────────────────────
+  static const Color semaforGreen = Color(0xFF4CAF50);
+  static const Color semaforYellow = Color(0xFFFFC107);
+  static const Color semaforOrange = Color(0xFFFF9800);
+  static const Color semaforRed = Color(0xFFF44336);
+  static const Color semaforPurple = Color(0xFF9C27B0);
+
   static const Map<String, int> semaforColors = {
     'GREEN': 0xFF4CAF50,
     'YELLOW': 0xFFFFC107,

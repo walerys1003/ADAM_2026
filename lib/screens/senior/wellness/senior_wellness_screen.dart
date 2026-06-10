@@ -381,7 +381,7 @@ class _SeniorWellnessScreenState extends State<SeniorWellnessScreen> {
               Expanded(
                 child: StatCard(
                   icon: Icons.directions_walk,
-                  label: 'Kroki',
+                  title: 'Kroki',
                   value: '4,823',
                   color: const Color(0xFF4ECDC4),
                   subtitle: 'cel: 6,000',
@@ -391,7 +391,7 @@ class _SeniorWellnessScreenState extends State<SeniorWellnessScreen> {
               Expanded(
                 child: StatCard(
                   icon: Icons.favorite,
-                  label: 'Tętno',
+                  title: 'Tętno',
                   value: '72',
                   color: const Color(0xFFFF6B6B),
                   subtitle: 'BPM',
@@ -405,7 +405,7 @@ class _SeniorWellnessScreenState extends State<SeniorWellnessScreen> {
               Expanded(
                 child: StatCard(
                   icon: Icons.air,
-                  label: 'SpO2',
+                  title: 'SpO2',
                   value: '97%',
                   color: const Color(0xFF45B7D1),
                   subtitle: 'norma',
@@ -415,7 +415,7 @@ class _SeniorWellnessScreenState extends State<SeniorWellnessScreen> {
               Expanded(
                 child: StatCard(
                   icon: Icons.bed,
-                  label: 'Sen',
+                  title: 'Sen',
                   value: '7.5h',
                   color: const Color(0xFF96CEB4),
                   subtitle: 'dobry',

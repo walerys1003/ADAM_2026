@@ -10,63 +10,37 @@ void main() {
       provider = AppProvider();
     });
 
+    Senior _testSenior({String id = 'test-1', String semafor = 'GREEN'}) => Senior(
+          id: id,
+          firstName: 'Test',
+          lastName: 'User',
+          phone: '+48 600 000 000',
+          package: 'KONTAKT',
+          semafor: semafor,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
     test('initial state has correct defaults', () {
       expect(provider.currentSenior, isNull);
       expect(provider.seniors, isEmpty);
       expect(provider.isLoading, false);
-      expect(provider.currentThemeMode, 'senior');
+      expect(provider.currentThemeMode, 'admin');
       expect(provider.currentLocale, 'pl');
       expect(provider.isAuthenticated, false);
     });
 
-    test('setCurrentSenior updates the senior', () {
-      final senior = Senior(
-        id: 'test-1',
-        firstName: 'Jan',
-        lastName: 'Kowalski',
-        phone: '+48 600 000 000',
-        dateOfBirth: DateTime(1950, 1, 1),
-        semaforLevel: 'GREEN',
-        package: 'KONTAKT',
-        onboardingCompleted: true,
-        voiceRecordingConsent: true,
-        healthDataConsent: true,
-        familySharingConsent: true,
-      );
-
-      provider.setCurrentSenior(senior);
+    test('setCurrentSenior updates the senior', () async {
+      final senior = _testSenior();
+      await provider.setCurrentSenior(senior);
       expect(provider.currentSenior?.id, 'test-1');
-      expect(provider.currentSenior?.fullName, 'Jan Kowalski');
+      expect(provider.currentSenior?.fullName, 'Test User');
     });
 
     test('setSeniors updates the list', () {
       final seniors = [
-        Senior(
-          id: 's1',
-          firstName: 'A',
-          lastName: 'B',
-          phone: '+48 600 000 001',
-          dateOfBirth: DateTime(1950, 1, 1),
-          semaforLevel: 'GREEN',
-          package: 'KONTAKT',
-          onboardingCompleted: true,
-          voiceRecordingConsent: true,
-          healthDataConsent: true,
-          familySharingConsent: true,
-        ),
-        Senior(
-          id: 's2',
-          firstName: 'C',
-          lastName: 'D',
-          phone: '+48 600 000 002',
-          dateOfBirth: DateTime(1955, 2, 2),
-          semaforLevel: 'YELLOW',
-          package: 'ZDROWIE',
-          onboardingCompleted: true,
-          voiceRecordingConsent: true,
-          healthDataConsent: true,
-          familySharingConsent: true,
-        ),
+        _testSenior(id: 's1'),
+        _testSenior(id: 's2', semafor: 'YELLOW'),
       ];
 
       provider.setSeniors(seniors);
@@ -96,20 +70,7 @@ void main() {
 
     test('logout clears state', () {
       provider.login();
-      final senior = Senior(
-        id: 'test-1',
-        firstName: 'X',
-        lastName: 'Y',
-        phone: '+48 600 000 000',
-        dateOfBirth: DateTime(1950, 1, 1),
-        semaforLevel: 'GREEN',
-        package: 'KONTAKT',
-        onboardingCompleted: true,
-        voiceRecordingConsent: true,
-        healthDataConsent: true,
-        familySharingConsent: true,
-      );
-      provider.setCurrentSenior(senior);
+      provider.setCurrentSenior(_testSenior());
 
       provider.logout();
 
@@ -121,21 +82,9 @@ void main() {
       expect(provider.semaforLevel, 'GREEN');
     });
 
-    test('semaforLevel getter returns senior level', () {
-      final senior = Senior(
-        id: 'test-1',
-        firstName: 'X',
-        lastName: 'Y',
-        phone: '+48 600 000 000',
-        dateOfBirth: DateTime(1950, 1, 1),
-        semaforLevel: 'ORANGE',
-        package: 'KONTAKT',
-        onboardingCompleted: true,
-        voiceRecordingConsent: true,
-        healthDataConsent: true,
-        familySharingConsent: true,
-      );
-      provider.setCurrentSenior(senior);
+    test('semaforLevel getter returns senior level', () async {
+      final senior = _testSenior(semafor: 'ORANGE');
+      await provider.setCurrentSenior(senior);
 
       expect(provider.semaforLevel, 'ORANGE');
     });

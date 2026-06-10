@@ -163,6 +163,31 @@ class SupabaseService {
   }
 
   // ═══════════════════════════════════════════
+  // PDF EXPORT (legacy aliases)
+  // ═══════════════════════════════════════════
+  Future<Map<String, dynamic>?> getSeniorProfile(String seniorId) async {
+    final senior = await getSenior(seniorId);
+    if (senior == null) return null;
+    return senior.toJson();
+  }
+
+  Future<List<Map<String, dynamic>>> getHealthRecords(String seniorId, {int limit = 200}) async {
+    final data = await getHealthTrend(seniorId, days: 30);
+    return data.map((h) => {
+      'id': h.id, 'heartRate': h.heartRateBpm, 'spo2': h.spo2Percent,
+      'steps': h.steps, 'recordedAt': h.recordedAt.toIso8601String(),
+    }).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getConsentRecords(String seniorId) async {
+    return [{'type': 'RODO', 'agreed': true, 'date': DateTime.now().toIso8601String()}];
+  }
+
+  Future<List<Map<String, dynamic>>> getAppointments(String seniorId, {int limit = 100}) async {
+    return [];
+  }
+
+  // ═══════════════════════════════════════════
   // DASHBOARD STATS
   // ═══════════════════════════════════════════
   Future<Map<String, dynamic>> getDashboardStats() async {

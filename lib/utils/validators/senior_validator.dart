@@ -47,4 +47,28 @@ class SeniorValidator {
     if (value != null && !valid.contains(value)) return 'Nieprawidłowy poziom';
     return null;
   }
+
+  // ── Test-facing aliases (backward compat) ──
+  static String? validatePhone(String? value) => phone(value);
+  static String? validateEmail(String? value) => email(value);
+  static String? validatePassword(String? value) {
+    if (value == null || value.isEmpty) return 'Hasło jest wymagane';
+    if (value.length < 8) return 'Hasło musi mieć minimum 8 znaków';
+    if (!RegExp(r'[0-9]').hasMatch(value)) return 'Hasło musi zawierać cyfrę';
+    if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(value)) return 'Hasło musi zawierać znak specjalny';
+    return null;
+  }
+  static String? validateAge(dynamic value) {
+    if (value is DateTime) return birthDate(value);
+    if (value is String) {
+      final age = int.tryParse(value);
+      if (age == null) return 'Nieprawidłowy format';
+      if (age < 60) return 'Senior musi mieć co najmniej 60 lat';
+      if (age > 120) return 'Wiek nie może przekraczać 120 lat';
+      return null;
+    }
+    return 'Nieprawidłowy format';
+  }
+  static String? validateRequired(String? value, [String? label]) => value == null || value.trim().isEmpty ? '${label ?? 'To pole'} jest wymagane' : null;
+  static String? validateSemaforLevel(String? value) => crisisLevel(value);
 }

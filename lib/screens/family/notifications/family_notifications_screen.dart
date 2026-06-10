@@ -138,7 +138,7 @@ class _FamilyNotificationsScreenState extends State<FamilyNotificationsScreen> {
         padding: const EdgeInsets.only(top: 4),
         child: Row(
           children: [
-            SemaforBadge(level: item.semafor, size: 12),
+            SemaforBadge(semafor: item.semafor, size: 12),
             const SizedBox(width: 8),
             Text(item.seniorName, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
             const SizedBox(width: 8),

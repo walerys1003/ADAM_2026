@@ -49,6 +49,21 @@ class HealthData {
         activityDurationMinutes: json['activity_duration_minutes'] as int?,
       );
 
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'senior_id': seniorId,
+        'device_type': deviceType,
+        'recorded_at': recordedAt.toIso8601String(),
+        'heart_rate_bpm': heartRateBpm,
+        'heart_rate_resting_bpm': heartRateRestingBpm,
+        'spo2_percent': spo2Percent,
+        'steps': steps,
+        'calories_burned': caloriesBurned,
+        'distance_meters': distanceMeters,
+        'activity_type': activityType,
+        'activity_duration_minutes': activityDurationMinutes,
+      };
+
   String get heartRateStatus {
     if (heartRateBpm == null) return 'Brak danych';
     if (heartRateBpm! < 50) return 'Niskie';

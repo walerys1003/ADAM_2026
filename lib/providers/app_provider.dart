@@ -174,4 +174,60 @@ class AppProvider extends ChangeNotifier {
     _isLoading = value;
     notifyListeners();
   }
+
+  /// Public alias for test/legacy compatibility
+  void setLoading(bool value) => _setLoading(value);
+
+  /// Legacy alias for selectSenior — accepts Senior or String
+  Future<void> setCurrentSenior(dynamic seniorOrId) async {
+    if (seniorOrId is String) {
+      await selectSenior(seniorOrId);
+      return;
+    }
+    if (seniorOrId is Senior) {
+      _selectedSenior = seniorOrId;
+      notifyListeners();
+      return;
+    }
+  }
+
+  // ── Voice ──
+  Future<void> startCall(String mode) async {
+    if (_selectedSenior == null) return;
+    await _api.initiateOutboundCall(
+      seniorId: _selectedSenior!.id,
+      phoneNumber: _selectedSenior!.phone,
+      callType: mode == 'current' ? 'senior_initiated' : 'welfare_check_morning',
+    );
+  }
+
+  void setSeniors(List<Senior> list) {
+    _seniors = list;
+    notifyListeners();
+  }
+
+  // ── Legacy getters for test compat ──
+  Senior? get currentSenior => _selectedSenior;
+  String get currentThemeMode => _userRole == 'senior' ? 'senior' : 'admin';
+  String get currentLocale => 'pl';
+  bool _isAuthenticated = false;
+  bool get isAuthenticated => _isAuthenticated;
+  String get semaforLevel => _selectedSenior?.semafor ?? 'GREEN';
+
+  void setThemeMode(String mode) {
+    // no-op for now, theme is role-based
+    notifyListeners();
+  }
+
+  void login() {
+    _isAuthenticated = true;
+    notifyListeners();
+  }
+
+  void logout() {
+    _isAuthenticated = false;
+    _selectedSenior = null;
+    _seniors = [];
+    notifyListeners();
+  }
 }

@@ -248,7 +248,7 @@ class _SeniorVoiceChatScreenState extends State<SeniorVoiceChatScreen>
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.end, children: [
           TextButton(onPressed: () => setState(() => _showKeypad = false),
-              child: const Text('Ukryj', style: TextStyle(color: Colors.white54)))),
+              child: const Text('Ukryj', style: TextStyle(color: Colors.white54)))]),
         const SizedBox(height: 8),
         Expanded(
           child: GridView.builder(

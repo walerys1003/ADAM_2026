@@ -19,7 +19,7 @@ void main() {
             },
           ),
         ],
-        child: const MaterialApp(home: SeniorHealthScreen()),
+        child: MaterialApp(home: SeniorHealthScreen(seniorId: 'senior-mock-001')),
       );
     }
 
@@ -43,7 +43,7 @@ void main() {
       await tester.pumpWidget(
         MultiProvider(
           providers: [ChangeNotifierProvider<AppProvider>.value(value: provider)],
-          child: const MaterialApp(home: SeniorHealthScreen()),
+          child: MaterialApp(home: SeniorHealthScreen(seniorId: 'senior-mock-001')),
         ),
       );
 

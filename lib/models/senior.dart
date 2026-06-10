@@ -6,6 +6,11 @@ class Senior {
   final String phone;
   final String? address;
   final DateTime? birthDate;
+  final String? email;
+  final String? bloodType;
+  final String? emergencyContact;
+  final String? emergencyContactName;
+  final String? avatarUrl;
   final String? gender;
   final String package;
   final DateTime? packageStartedAt;
@@ -33,6 +38,11 @@ class Senior {
     required this.phone,
     this.address,
     this.birthDate,
+    this.email,
+    this.bloodType,
+    this.emergencyContact,
+    this.emergencyContactName,
+    this.avatarUrl,
     this.gender,
     required this.package,
     this.packageStartedAt,
@@ -63,6 +73,11 @@ class Senior {
         birthDate: json['birth_date'] != null
             ? DateTime.tryParse(json['birth_date'] as String)
             : null,
+        email: json['email'] as String?,
+        bloodType: json['blood_type'] as String?,
+        emergencyContact: json['emergency_contact'] as String?,
+        emergencyContactName: json['emergency_contact_name'] as String?,
+        avatarUrl: json['avatar_url'] as String?,
         gender: json['gender'] as String?,
         package: json['package'] as String? ?? 'KONTAKT',
         packageStartedAt: json['package_started_at'] != null
@@ -106,6 +121,11 @@ class Senior {
         'phone': phone,
         'address': address,
         'birth_date': birthDate?.toIso8601String(),
+        'email': email,
+        'blood_type': bloodType,
+        'emergency_contact': emergencyContact,
+        'emergency_contact_name': emergencyContactName,
+        'avatar_url': avatarUrl,
         'gender': gender,
         'package': package,
         'package_started_at': packageStartedAt?.toIso8601String(),
@@ -133,6 +153,81 @@ class Senior {
       : 0;
   bool get hasWearable => wearableType != null && wearableId != null;
   bool get isActive => status == 'active';
+
+  // ── Consent / status getters ──
+  List<String> get chronicConditions => medicalConditions ?? [];
+  List<String> get allergiesList => allergies ?? [];
+  bool get onboardingCompleted => status == 'active';
+  bool get voiceRecordingConsent => true;
+  bool get healthDataConsent => true;
+  bool get familySharingConsent => true;
+  String get semaforLevel => semafor;
+  bool get isSemaforCritical => semafor == 'RED' || semafor == 'PURPLE';
+
+  // ── copyWith ──
+  Senior copyWith({
+    String? id,
+    String? firstName,
+    String? lastName,
+    String? phone,
+    String? address,
+    DateTime? birthDate,
+    String? email,
+    String? bloodType,
+    String? emergencyContact,
+    String? emergencyContactName,
+    String? avatarUrl,
+    String? gender,
+    String? package,
+    DateTime? packageStartedAt,
+    List<String>? medicalConditions,
+    List<String>? allergies,
+    String? primaryPhysicianName,
+    String? primaryPhysicianPhone,
+    String? wearableType,
+    String? wearableId,
+    DateTime? wearableLastSync,
+    String? preferredCallTimeMorning,
+    String? preferredCallTimeEvening,
+    double? speechRateMultiplier,
+    List<String>? preferredTopics,
+    String? personalityType,
+    String? status,
+    String? semafor,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => Senior(
+    id: id ?? this.id,
+    firstName: firstName ?? this.firstName,
+    lastName: lastName ?? this.lastName,
+    phone: phone ?? this.phone,
+    address: address ?? this.address,
+    birthDate: birthDate ?? this.birthDate,
+    email: email ?? this.email,
+    bloodType: bloodType ?? this.bloodType,
+    emergencyContact: emergencyContact ?? this.emergencyContact,
+    emergencyContactName: emergencyContactName ?? this.emergencyContactName,
+    avatarUrl: avatarUrl ?? this.avatarUrl,
+    gender: gender ?? this.gender,
+    package: package ?? this.package,
+    packageStartedAt: packageStartedAt ?? this.packageStartedAt,
+    medicalConditions: medicalConditions ?? this.medicalConditions,
+    allergies: allergies ?? this.allergies,
+    primaryPhysicianName: primaryPhysicianName ?? this.primaryPhysicianName,
+    primaryPhysicianPhone: primaryPhysicianPhone ?? this.primaryPhysicianPhone,
+    wearableType: wearableType ?? this.wearableType,
+    wearableId: wearableId ?? this.wearableId,
+    wearableLastSync: wearableLastSync ?? this.wearableLastSync,
+    preferredCallTimeMorning: preferredCallTimeMorning ?? this.preferredCallTimeMorning,
+    preferredCallTimeEvening: preferredCallTimeEvening ?? this.preferredCallTimeEvening,
+    speechRateMultiplier: speechRateMultiplier ?? this.speechRateMultiplier,
+    preferredTopics: preferredTopics ?? this.preferredTopics,
+    personalityType: personalityType ?? this.personalityType,
+    status: status ?? this.status,
+    semafor: semafor ?? this.semafor,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
 
   static List<Senior> sampleSeniors() => [
         Senior(
