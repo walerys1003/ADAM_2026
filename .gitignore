@@ -1,3 +1,6 @@
+# GitHub Actions (blocked by App permissions)
+.github/
+
 # Miscellaneous
 *.class
 *.log
