@@ -69,6 +69,22 @@ class AppProvider extends ChangeNotifier {
     _setLoading(false);
   }
 
+  /// Check if user has an active auth session
+  Future<bool> checkAuthState() async {
+    try {
+      final session = await _supabase.getSession();
+      if (session != null) {
+        _isAuthenticated = true;
+        _userRole = session['role'] as String? ?? 'family';
+        return true;
+      }
+    } catch (_) {
+      // Not logged in — that's fine
+    }
+    // Default to landing page for web preview
+    return false;
+  }
+
   /// Switch between viewing modes (senior / family / admin)
   void switchRole(String role) {
     _userRole = role;

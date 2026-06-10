@@ -40,6 +40,9 @@ dependencies:
   # HTTP Client
   http: 1.5.0
 
+  # Permissions (Health Connect, Camera, Calendar)
+  permission_handler: 11.3.1
+
   # Connectivity
   connectivity_plus: 6.1.3
 

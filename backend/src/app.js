@@ -43,6 +43,61 @@ fastify.register(require('@fastify/compress'), {
   threshold: 1024,
 });
 
+// ── OpenAPI / Swagger Documentation ────────────────────
+fastify.register(require('@fastify/swagger'), {
+  openapi: {
+    info: {
+      title: 'Agent Adam — Senior Companion API',
+      description: 'SilverTech Agent Adam — AI Voice Assistant for Seniors.\n\n'
+        + '**7-layer voice pipeline:** Twilio → Deepgram Nova-3 → System Prompt + pgvector RAG '
+        + '→ Gemini 3.2 Flash Live → Guardrails → OpenAI TTS-1 → Hetzner VPS',
+      version: '1.6.0',
+      contact: {
+        name: 'SilverTech Support',
+        email: 'support@silvertech.ai',
+        url: 'https://silvertech.ai',
+      },
+      license: { name: 'UNLICENSED' },
+    },
+    servers: [
+      { url: 'https://api.silvertech.ai', description: 'Production' },
+      { url: 'http://localhost:3000', description: 'Local development' },
+    ],
+    tags: [
+      { name: 'Auth', description: 'Authentication & JWT tokens' },
+      { name: 'Seniors', description: 'Senior profiles management' },
+      { name: 'Voice', description: 'Voice calls & WebSocket streaming' },
+      { name: 'Health', description: 'Health data from wearables' },
+      { name: 'Medications', description: 'Medication tracking & reminders' },
+      { name: 'Conversations', description: 'Call transcripts & analytics' },
+      { name: 'Family', description: 'Family dashboard endpoints' },
+      { name: 'Admin', description: 'Admin panel & analytics' },
+      { name: 'Marketplace', description: 'Service marketplace' },
+      { name: 'Analytics', description: 'Usage analytics & cost tracking' },
+      { name: 'Webhooks', description: 'External service webhooks' },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    security: [{ bearerAuth: [] }],
+  },
+});
+
+fastify.register(require('@fastify/swagger-ui'), {
+  routePrefix: '/docs',
+  uiConfig: {
+    docExpansion: 'list',
+    deepLinking: true,
+  },
+  staticCSP: true,
+});
+
 // ── JWT Authentication Plugin ──────────────────────────
 fastify.register(require('@fastify/jwt'), {
   secret: process.env.JWT_SECRET || 'silvertech-adam-jwt-secret-2026',

@@ -1,0 +1,287 @@
+# ─────────────────────────────────────────────────────────────────
+# Agent Adam — Production Docker Compose Stack
+# SilverTech | June 2026
+#
+# Full stack: API server + BullMQ workers + PostgreSQL (pgvector)
+# + Redis + monitoring (Prometheus + Grafana)
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml up -d
+#   docker compose -f docker-compose.prod.yml down
+# ─────────────────────────────────────────────────────────────────
+
+version: '3.9'
+
+x-common-env: &common-env
+  NODE_ENV: production
+  LOG_LEVEL: info
+  JWT_SECRET: ${JWT_SECRET:-silvertech-adam-jwt-secret-2026}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-adam}:${POSTGRES_PASSWORD:-adam_prod_2026}@postgres:5432/${POSTGRES_DB:-agent_adam}
+  REDIS_URL: redis://redis:6379
+  CORS_ORIGINS: https://silvertech.ai,https://api.silvertech.ai,https://admin.silvertech.ai
+  RATE_LIMIT_MAX: 100
+
+services:
+  # ═════════════════════════════════════════════════════════════
+  # PostgreSQL 17 + pgvector
+  # ═════════════════════════════════════════════════════════════
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: adam-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-adam}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-adam_prod_2026}
+      POSTGRES_DB: ${POSTGRES_DB:-agent_adam}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - adam-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+
+  # ═════════════════════════════════════════════════════════════
+  # Redis 7 (BullMQ + session cache)
+  # ═════════════════════════════════════════════════════════════
+  redis:
+    image: redis:7-alpine
+    container_name: adam-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - adam-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # ═════════════════════════════════════════════════════════════
+  # Fastify API Server
+  # ═════════════════════════════════════════════════════════════
+  api:
+    build:
+      context: ../../backend
+      dockerfile: ../infra/docker/Dockerfile.backend
+      args:
+        NODE_ENV: production
+    image: ghcr.io/silvertech/agent-adam-api:latest
+    container_name: adam-api
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      HOST: 0.0.0.0
+      PORT: 3000
+      # External API keys (set via environment or secrets)
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      # Production settings
+      VOICE_RATE_LIMIT: 20
+      VOICE_MAX_CONCURRENCY: 4
+      GUARDRAILS_STRICT: "true"
+      RAG_TOP_K: 5
+      RAG_SIMILARITY_THRESHOLD: 0.75
+      MAX_CONVERSATION_DURATION: 600
+      SEMAFOR_AUTO_ESCALATE: "true"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - adam-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+
+  # ═════════════════════════════════════════════════════════════
+  # BullMQ Worker — background jobs
+  # ═════════════════════════════════════════════════════════════
+  worker:
+    build:
+      context: ../../backend
+      dockerfile: ../infra/docker/Dockerfile.backend
+      target: worker
+      args:
+        NODE_ENV: production
+    image: ghcr.io/silvertech/agent-adam-worker:latest
+    container_name: adam-worker
+    restart: unless-stopped
+    command: ["node", "src/workers/index.js"]
+    environment:
+      <<: *common-env
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - adam-network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 768M
+          cpus: '1'
+        reservations:
+          memory: 256M
+          cpus: '0.3'
+
+  # ═════════════════════════════════════════════════════════════
+  # NGINX Reverse Proxy
+  # ═════════════════════════════════════════════════════════════
+  nginx:
+    build:
+      context: ../../infra/docker
+      dockerfile: Dockerfile.nginx
+    image: ghcr.io/silvertech/agent-adam-nginx:latest
+    container_name: adam-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./ssl:/etc/nginx/ssl:ro
+      - ../../infra/nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - api
+    networks:
+      - adam-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+
+  # ═════════════════════════════════════════════════════════════
+  # Prometheus — metrics collection
+  # ═════════════════════════════════════════════════════════════
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: adam-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ../../infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - adam-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1'
+
+  # ═════════════════════════════════════════════════════════════
+  # Grafana — dashboards & alerting
+  # ═════════════════════════════════════════════════════════════
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: adam-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../../infra/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../../infra/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - adam-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.5'
+
+volumes:
+  postgres_data:
+    driver: local
+    name: adam-postgres-data
+  redis_data:
+    driver: local
+    name: adam-redis-data
+  prometheus_data:
+    driver: local
+    name: adam-prometheus-data
+  grafana_data:
+    driver: local
+    name: adam-grafana-data
+
+networks:
+  adam-network:
+    driver: bridge
+    name: adam-network

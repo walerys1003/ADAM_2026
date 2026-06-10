@@ -188,6 +188,50 @@ class SupabaseService {
   }
 
   // ═══════════════════════════════════════════
+  // AUTH
+  // ═══════════════════════════════════════════
+  /// Get current session — returns null if not logged in
+  Future<Map<String, dynamic>?> getSession() async {
+    try {
+      final session = _client.auth.currentSession;
+      if (session == null) return null;
+      return {
+        'accessToken': session.accessToken,
+        'role': session.user.userMetadata?['role'] ?? 'senior',
+        'userId': session.user.id,
+        'email': session.user.email ?? '',
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Sign in with email and password
+  Future<Map<String, dynamic>?> signIn(String email, String password) async {
+    try {
+      final response = await _client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      final user = response.user;
+      if (user == null) return null;
+      return {
+        'userId': user.id,
+        'email': user.email,
+        'role': user.userMetadata?['role'] ?? 'senior',
+      };
+    } catch (e) {
+      debugPrint('signIn error: $e');
+      return null;
+    }
+  }
+
+  /// Sign out
+  Future<void> signOut() async {
+    await _client.auth.signOut();
+  }
+
+  // ═══════════════════════════════════════════
   // DASHBOARD STATS
   // ═══════════════════════════════════════════
   Future<Map<String, dynamic>> getDashboardStats() async {
