@@ -70,10 +70,12 @@ class CalendarEvent {
 class CalendarService extends ChangeNotifier {
   List<CalendarEvent> _events = [];
   List<CalendarEvent> _upcomingEvents = [];
-  DateTime _selectedDate = DateTime.now();
+  final DateTime _selectedDate = DateTime.now();
+  // ignore: prefer_final_fields
   bool _isLoading = false;
 
   // Getters
+  bool get isLoading => _isLoading;
   List<CalendarEvent> get events => List.unmodifiable(_events);
   List<CalendarEvent> get upcomingEvents => List.unmodifiable(_upcomingEvents);
   DateTime get selectedDate => _selectedDate;

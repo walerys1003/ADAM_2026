@@ -42,7 +42,7 @@ class SupabaseService {
   Future<Senior?> getSenior(String id) async {
     try {
       final data = await _client.from('seniors').select().eq('id', id).single();
-      return Senior.fromJson(data as Map<String, dynamic>);
+      return Senior.fromJson(data);
     } catch (e) {
       debugPrint('getSenior error: $e');
       final samples = Senior.sampleSeniors();
@@ -117,7 +117,7 @@ class SupabaseService {
           .order('recorded_at', ascending: false)
           .limit(1)
           .single();
-      return HealthData.fromJson(data as Map<String, dynamic>);
+      return HealthData.fromJson(data);
     } catch (e) {
       debugPrint('getLatestHealthData error: $e');
       return null;

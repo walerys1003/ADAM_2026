@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 
 /// Testimonials Carousel Widget for Landing Page
 /// Auto-scrolling horizontal carousel with rating stars and avatar

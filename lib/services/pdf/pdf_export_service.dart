@@ -1,10 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import '../../models/senior.dart';
-import '../../models/health_data.dart';
-import '../../models/conversation.dart';
-import '../../models/medication.dart';
 import '../supabase_service.dart';
 
 /// PDF Export Service for EMIAL (RODO Article 20 — Data Portability)
@@ -189,7 +185,7 @@ class PdfExportService {
       String seniorId) async {
     try {
       final data = await _supabase.getConsentRecords(seniorId);
-      return data ?? [];
+      return data;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('Failed to fetch consent records: $e');
@@ -203,7 +199,7 @@ class PdfExportService {
     try {
       final data =
           await _supabase.getAppointments(seniorId, limit: 100);
-      return data ?? [];
+      return data;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('Failed to fetch appointments: $e');

@@ -1,0 +1,369 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "agent-adam-voice-analytics",
+    "title": "Agent Adam — Voice Analytics",
+    "description": "Deep-dive voice pipeline monitoring: STT accuracy, LLM latency, TTS quality, conversation sentiments, crisis detection rate, and per-senior voice usage patterns.",
+    "tags": ["agent-adam", "voice", "ai-pipeline", "silvertech"],
+    "timezone": "Europe/Warsaw",
+    "schemaVersion": 39,
+    "version": 0,
+    "refresh": "15s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+        "type": "stat",
+        "title": "Active Conversations",
+        "targets": [
+          { "expr": "agent_adam_voice_calls_active", "legendFormat": "Active" }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": { "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 5, "color": "yellow" },
+              { "value": 15, "color": "orange" },
+              { "value": 20, "color": "red" }
+            ]}
+          }
+        }
+      },
+      {
+        "id": 2,
+        "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+        "type": "stat",
+        "title": "STT Word Error Rate (%)",
+        "targets": [
+          { "expr": "avg(agent_adam_stt_wer * 100)", "legendFormat": "WER" }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 1,
+            "thresholds": { "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 5, "color": "yellow" },
+              { "value": 10, "color": "red" }
+            ]}
+          }
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+        "type": "stat",
+        "title": "Avg LLM Latency (ms)",
+        "targets": [
+          { "expr": "rate(agent_adam_llm_latency_sum[5m]) / rate(agent_adam_llm_latency_count[5m])", "legendFormat": "LLM ms" }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "thresholds": { "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 800, "color": "yellow" },
+              { "value": 1500, "color": "red" }
+            ]}
+          }
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+        "type": "stat",
+        "title": "TTS Generation Time (ms)",
+        "targets": [
+          { "expr": "rate(agent_adam_tts_duration_sum[5m]) / rate(agent_adam_tts_duration_count[5m])", "legendFormat": "TTS ms" }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "thresholds": { "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 500, "color": "yellow" },
+              { "value": 1000, "color": "red" }
+            ]}
+          }
+        }
+      },
+      {
+        "id": 5,
+        "gridPos": { "x": 16, "y": 0, "w": 4, "h": 4 },
+        "type": "stat",
+        "title": "Crisis Keywords Detected (24h)",
+        "targets": [
+          { "expr": "increase(agent_adam_crisis_keywords_total[24h])", "legendFormat": "Crisis" }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": { "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 5, "color": "orange" },
+              { "value": 10, "color": "red" }
+            ]}
+          }
+        }
+      },
+      {
+        "id": 6,
+        "gridPos": { "x": 20, "y": 0, "w": 4, "h": 4 },
+        "type": "stat",
+        "title": "Guardrails Blocks (24h)",
+        "targets": [
+          { "expr": "increase(agent_adam_guardrails_blocks_total[24h])", "legendFormat": "Blocks" }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": { "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 10, "color": "yellow" },
+              { "value": 30, "color": "red" }
+            ]}
+          }
+        }
+      },
+      {
+        "id": 10,
+        "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+        "type": "timeseries",
+        "title": "Voice Pipeline Latency Breakdown (p50/p95)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(agent_adam_stt_latency_bucket[5m]))",
+            "legendFormat": "STT p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(agent_adam_stt_latency_bucket[5m]))",
+            "legendFormat": "STT p95"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(agent_adam_llm_latency_bucket[5m]))",
+            "legendFormat": "LLM p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(agent_adam_llm_latency_bucket[5m]))",
+            "legendFormat": "LLM p95"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(agent_adam_tts_latency_bucket[5m]))",
+            "legendFormat": "TTS p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(agent_adam_tts_latency_bucket[5m]))",
+            "legendFormat": "TTS p95"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": { "lineInterpolation": "smooth", "fillOpacity": 10 }
+          }
+        }
+      },
+      {
+        "id": 11,
+        "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+        "type": "timeseries",
+        "title": "Conversation Sentiment Trends",
+        "targets": [
+          {
+            "expr": "avg(agent_adam_conversation_sentiment{emotion=\"joy\"})",
+            "legendFormat": "Joy"
+          },
+          {
+            "expr": "avg(agent_adam_conversation_sentiment{emotion=\"neutral\"})",
+            "legendFormat": "Neutral"
+          },
+          {
+            "expr": "avg(agent_adam_conversation_sentiment{emotion=\"sadness\"})",
+            "legendFormat": "Sadness"
+          },
+          {
+            "expr": "avg(agent_adam_conversation_sentiment{emotion=\"anxiety\"})",
+            "legendFormat": "Anxiety"
+          },
+          {
+            "expr": "avg(agent_adam_conversation_sentiment{emotion=\"loneliness\"})",
+            "legendFormat": "Loneliness"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": { "lineInterpolation": "smooth", "fillOpacity": 15 },
+            "color": { "mode": "palette-classic" }
+          }
+        }
+      },
+      {
+        "id": 20,
+        "gridPos": { "x": 0, "y": 12, "w": 8, "h": 6 },
+        "type": "bargauge",
+        "title": "RAG Retrieval Sources",
+        "targets": [
+          {
+            "expr": "sum by (source) (rate(agent_adam_rag_retrieval_total[1h]))",
+            "legendFormat": "{{source}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" }
+          }
+        }
+      },
+      {
+        "id": 21,
+        "gridPos": { "x": 8, "y": 12, "w": 8, "h": 6 },
+        "type": "timeseries",
+        "title": "Guardrails: Block Reasons (stacked)",
+        "targets": [
+          {
+            "expr": "sum by (reason) (rate(agent_adam_guardrails_blocks_total[10m]))",
+            "legendFormat": "{{reason}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": { "stacking": { "mode": "normal" } }
+          }
+        }
+      },
+      {
+        "id": 22,
+        "gridPos": { "x": 16, "y": 12, "w": 8, "h": 6 },
+        "type": "piechart",
+        "title": "Conversation Topics Distribution",
+        "targets": [
+          {
+            "expr": "sum by (topic) (rate(agent_adam_conversation_topics_total[6h]))",
+            "legendFormat": "{{topic}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" }
+          }
+        }
+      },
+      {
+        "id": 30,
+        "gridPos": { "x": 0, "y": 18, "w": 8, "h": 6 },
+        "type": "stat",
+        "title": "Avg Conversation Duration (s)",
+        "targets": [
+          {
+            "expr": "avg(rate(agent_adam_conversation_duration_seconds_sum[1h]) / rate(agent_adam_conversation_duration_seconds_count[1h]))",
+            "legendFormat": "Avg Duration"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "decimals": 0,
+            "thresholds": { "steps": [
+              { "value": 0, "color": "blue" },
+              { "value": 120, "color": "green" },
+              { "value": 300, "color": "yellow" },
+              { "value": 600, "color": "red" }
+            ]}
+          }
+        }
+      },
+      {
+        "id": 31,
+        "gridPos": { "x": 8, "y": 18, "w": 8, "h": 6 },
+        "type": "stat",
+        "title": "Silence Timeouts (24h)",
+        "targets": [
+          { "expr": "increase(agent_adam_silence_timeout_total[24h])", "legendFormat": "Timeouts" }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": { "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 20, "color": "yellow" },
+              { "value": 50, "color": "red" }
+            ]}
+          }
+        }
+      },
+      {
+        "id": 32,
+        "gridPos": { "x": 16, "y": 18, "w": 8, "h": 6 },
+        "type": "stat",
+        "title": "Call Drop Rate (%)",
+        "targets": [
+          {
+            "expr": "(sum(rate(agent_adam_call_drop_total[1h])) / sum(rate(agent_adam_voice_calls_total[1h]))) * 100",
+            "legendFormat": "Drop Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2,
+            "thresholds": { "steps": [
+              { "value": 0, "color": "green" },
+              { "value": 2, "color": "yellow" },
+              { "value": 5, "color": "red" }
+            ]}
+          }
+        }
+      },
+      {
+        "id": 40,
+        "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+        "type": "table",
+        "title": "Top Seniors by Voice Usage",
+        "targets": [
+          {
+            "expr": "topk(10, sum by (senior_name, senior_id) (rate(agent_adam_voice_calls_total[24h])))",
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          { "id": "organize", "options": { "renameByName": { "senior_name": "Senior", "Value": "Calls/24h", "senior_id": "Senior ID" } } }
+        ]
+      },
+      {
+        "id": 41,
+        "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+        "type": "table",
+        "title": "Recent Crisis Detections",
+        "targets": [
+          {
+            "expr": "agent_adam_crisis_detections{severity=\"high\"}",
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          { "id": "organize", "options": { "renameByName": {
+            "senior_name": "Senior",
+            "keyword": "Keyword",
+            "semafor": "Semafor",
+            "timestamp": "Time"
+          }}}
+        ]
+      },
+      {
+        "id": 50,
+        "gridPos": { "x": 0, "y": 32, "w": 24, "h": 6 },
+        "type": "timeseries",
+        "title": "WebSocket Connections (Voice)",
+        "targets": [
+          { "expr": "agent_adam_ws_connections{type=\"voice\"}", "legendFormat": "Active WS" },
+          { "expr": "agent_adam_ws_connections{type=\"voice\",state=\"connecting\"}", "legendFormat": "Connecting" },
+          { "expr": "agent_adam_ws_connections{type=\"voice\",state=\"disconnecting\"}", "legendFormat": "Disconnecting" }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": { "lineInterpolation": "stepAfter", "fillOpacity": 10 }
+          }
+        }
+      }
+    ],
+    "time": { "from": "now-3h", "to": "now" }
+  }
+}

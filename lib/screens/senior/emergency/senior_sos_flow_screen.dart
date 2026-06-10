@@ -3,9 +3,6 @@
 /// Features: 3-step confirm, auto-dial 112 fallback, family notification, location sharing
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../../providers/app_provider.dart';
-import '../../../config/theme.dart';
 import '../../../config/app_config.dart';
 
 enum SosStep { initial, confirmCall, confirmAmbulance, calling, confirmed }

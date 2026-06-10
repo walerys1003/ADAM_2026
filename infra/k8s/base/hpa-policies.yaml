@@ -1,0 +1,253 @@
+# ─────────────────────────────────────────────────────────────────
+# Agent Adam — Advanced HPA Scaling Policies
+# SilverTech | June 2026
+# ─────────────────────────────────────────────────────────────────
+#
+# Custom scaling policies for voice-call-sensitive workloads.
+# Ensures rapid scale-up during call spikes (senior SOS, morning
+# check-in surges) and gradual scale-down to avoid thrashing.
+# ─────────────────────────────────────────────────────────────────
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: adam-api-hpa-advanced
+  namespace: agent-adam
+  labels:
+    app: adam-api
+    scaling-policy: voice-aware
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: adam-api
+  minReplicas: 2
+  maxReplicas: 20
+  behavior:
+    # ── Scale UP aggressively (senior calls cannot wait) ──
+    scaleUp:
+      stabilizationWindowSeconds: 15      # React in ~15s
+      policies:
+        - type: Pods
+          value: 4                         # +4 pods per step
+          periodSeconds: 30
+        - type: Percent
+          value: 100                       # Or double the count
+          periodSeconds: 30
+      selectPolicy: Max                    # Use whichever is larger
+    # ── Scale DOWN gradually (avoid thrashing) ──
+    scaleDown:
+      stabilizationWindowSeconds: 300      # Wait 5 min before scaling down
+      policies:
+        - type: Pods
+          value: 1                         # -1 pod per step
+          periodSeconds: 120               # Every 2 minutes
+        - type: Percent
+          value: 10                        # Or -10%
+          periodSeconds: 120
+      selectPolicy: Min                    # Use whichever is smaller
+  metrics:
+    # CPU-based scaling
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    # Memory-based scaling
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 75
+    # Custom: active voice calls per pod (max 10 calls/pod)
+    - type: Pods
+      pods:
+        metric:
+          name: agent_adam_voice_calls_active_per_pod
+        target:
+          type: AverageValue
+          averageValue: "10"
+
+---
+# ─────────────────────────────────────────────────────────────────
+# Worker HPA (BullMQ backlog-aware)
+# ─────────────────────────────────────────────────────────────────
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: adam-worker-hpa
+  namespace: agent-adam
+  labels:
+    app: adam-worker
+    scaling-policy: queue-aware
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: adam-worker
+  minReplicas: 1
+  maxReplicas: 10
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 600     # 10 min grace period for workers
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 300
+      selectPolicy: Min
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+    # Scale on BullMQ queue depth
+    - type: Pods
+      pods:
+        metric:
+          name: agent_adam_bullmq_waiting_per_worker
+        target:
+          type: AverageValue
+          averageValue: "50"
+
+---
+# ─────────────────────────────────────────────────────────────────
+# Rate Limit Middleware (Traefik)
+# Prevents voice API abuse / DDoS
+# ─────────────────────────────────────────────────────────────────
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: agent-adam-rate-limit
+  namespace: agent-adam
+spec:
+  rateLimit:
+    average: 100        # 100 req/s average
+    burst: 50           # Allow 50 burst above average
+    sourceCriterion:
+      ipStrategy:
+        depth: 1        # Client IP (even through Cloudflare proxy)
+
+---
+# ─────────────────────────────────────────────────────────────────
+# Network Policy: restrict pod-to-pod communication
+# ─────────────────────────────────────────────────────────────────
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: adam-api-network-policy
+  namespace: agent-adam
+spec:
+  podSelector:
+    matchLabels:
+      app: adam-api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik
+      ports:
+        - port: 3000
+          protocol: TCP
+    # Allow from monitoring (metrics scraping)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - port: 3000
+          protocol: TCP
+  egress:
+    # Allow to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - port: 5432
+          protocol: TCP
+    # Allow to Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - port: 6379
+          protocol: TCP
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+    # Allow external API calls (Deepgram, Gemini, OpenAI, Twilio, SendGrid)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - port: 443
+          protocol: TCP
+        - port: 80
+          protocol: TCP
+
+---
+# ─────────────────────────────────────────────────────────────────
+# Pod Disruption Budget for Workers
+# ─────────────────────────────────────────────────────────────────
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: adam-worker-pdb
+  namespace: agent-adam
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: adam-worker
+
+---
+# ─────────────────────────────────────────────────────────────────
+# Service Monitor (Prometheus Operator)
+# Auto-discovers metrics endpoints
+# ─────────────────────────────────────────────────────────────────
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: adam-api-monitor
+  namespace: agent-adam
+  labels:
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: adam-api
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+      scrapeTimeout: 10s
+  namespaceSelector:
+    matchNames:
+      - agent-adam

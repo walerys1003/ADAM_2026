@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../mixins/accessibility/accessibility_mixin.dart';
 
 /// Landing Page — Blog Detail Screen
 /// Full article view with hero image, metadata, content, and related posts
@@ -10,7 +9,6 @@ class LandingBlogDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(

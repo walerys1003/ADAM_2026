@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'dart:math' as math;
-import '../../../providers/app_provider.dart';
 import '../../../mixins/accessibility/accessibility_mixin.dart';
 
 /// Senior Breathing Exercise Screen
@@ -22,7 +20,6 @@ class _SeniorBreathingScreenState extends State<SeniorBreathingScreen>
 
   BreathingPhase _phase = BreathingPhase.ready;
   int _cycleCount = 0;
-  int _totalSeconds = 0;
   bool _isActive = false;
 
   static const _inhaleDuration = 4;

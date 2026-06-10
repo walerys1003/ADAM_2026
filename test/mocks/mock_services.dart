@@ -6,7 +6,6 @@ import '../mocks/mock_data.dart';
 
 /// Mock Supabase service — returns mock data without network calls
 class MockSupabaseService {
-  final Map<String, dynamic> _store = {};
 
   Future<Map<String, dynamic>?> getSeniorProfile(String seniorId) async {
     final senior = MockData.allSeniors.firstWhere(
@@ -102,8 +101,8 @@ class MockVoiceCallService extends ChangeNotifier {
 
 /// Mock notification service
 class MockNotificationService {
-  bool _medicationsEnabled = true;
-  bool _healthAlertsEnabled = true;
+  final bool _medicationsEnabled = true;
+  final bool _healthAlertsEnabled = true;
 
   bool get medicationsEnabled => _medicationsEnabled;
   bool get healthAlertsEnabled => _healthAlertsEnabled;

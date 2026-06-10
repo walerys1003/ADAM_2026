@@ -2,7 +2,6 @@
 /// Real-time alert feed, notification preferences, push/SMS/email config
 
 import 'package:flutter/material.dart';
-import '../../../config/theme.dart';
 import '../../../config/app_config.dart';
 import '../../../widgets/common/semafor_badge.dart';
 

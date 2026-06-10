@@ -10,9 +10,9 @@ namespace: agent-adam-staging
 resources:
   - ../../base
 
-nameSuffix: -staging
-
+# ─── Staging-specific patches ──────────────────────────────────────
 patches:
+  # Single replica for staging (cost savings)
   - target:
       kind: Deployment
       name: agent-adam-api
@@ -20,6 +20,7 @@ patches:
       - op: replace
         path: /spec/replicas
         value: 1
+
   - target:
       kind: Deployment
       name: agent-adam-worker
@@ -27,6 +28,37 @@ patches:
       - op: replace
         path: /spec/replicas
         value: 1
+
+  # Staging resource limits (lower)
+  - target:
+      kind: Deployment
+      name: agent-adam-api
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "1000m"
+            memory: "512Mi"
+
+  - target:
+      kind: Deployment
+      name: agent-adam-worker
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "384Mi"
+
+  # Staging HPA
   - target:
       kind: HorizontalPodAutoscaler
       name: agent-adam-api-hpa
@@ -36,8 +68,9 @@ patches:
         value: 1
       - op: replace
         path: /spec/maxReplicas
-        value: 3
+        value: 4
 
+# ─── ConfigMap generator ──────────────────────────────────────────
 configMapGenerator:
   - name: agent-adam-config
     behavior: merge
@@ -45,5 +78,35 @@ configMapGenerator:
       - NODE_ENV=staging
       - LOG_LEVEL=debug
       - CACHE_TTL=60
+      - VOICE_RATE_LIMIT=10
+      - VOICE_MAX_CONCURRENCY=2
       - GUARDRAILS_STRICT=false
+      - RAG_TOP_K=3
+      - RAG_SIMILARITY_THRESHOLD=0.6
+      - MAX_CONVERSATION_DURATION=300
       - SEMAfor_AUTO_ESCALATE=false
+      - DATA_RETENTION_DAYS=30
+      - LLM_MOCK_MODE=true
+      - VOICE_MOCK_MODE=true
+
+# ─── Secret generator ─────────────────────────────────────────────
+secretGenerator:
+  - name: agent-adam-secrets
+    behavior: merge
+    literals:
+      - NODE_ENV=staging
+      - API_KEY_STAGING=placeholder-staging-key
+
+# ─── Images (staging tag) ─────────────────────────────────────────
+images:
+  - name: agent-adam-api
+    newName: registry.silvertech.pl/agent-adam-api
+    newTag: staging
+  - name: agent-adam-worker
+    newName: registry.silvertech.pl/agent-adam-worker
+    newTag: staging
+
+# ─── Labels ───────────────────────────────────────────────────────
+commonLabels:
+  environment: staging
+  managed-by: kustomize

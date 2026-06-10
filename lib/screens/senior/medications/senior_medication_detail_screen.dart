@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../../models/medication.dart';
-import '../../../providers/app_provider.dart';
 import '../../../mixins/accessibility/accessibility_mixin.dart';
 
 /// Senior Medication Detail Screen
@@ -18,8 +16,6 @@ class SeniorMedicationDetailScreen extends StatefulWidget {
 
 class _SeniorMedicationDetailScreenState
     extends State<SeniorMedicationDetailScreen> with AccessibilityMixin {
-  int _selectedDayIndex = 6; // Show last 7 days
-
   final List<bool> _weekAdherence = [true, true, false, true, true, true, false];
 
   @override

@@ -3,11 +3,7 @@
 /// June 2026 — integrated with Health Connect data
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../../providers/app_provider.dart';
-import '../../../config/theme.dart';
 import '../../../config/app_config.dart';
-import '../../../widgets/common/mood_indicator.dart';
 import '../../../widgets/common/stat_card.dart';
 
 class SeniorWellnessScreen extends StatefulWidget {
@@ -20,8 +16,6 @@ class SeniorWellnessScreen extends StatefulWidget {
 class _SeniorWellnessScreenState extends State<SeniorWellnessScreen> {
   int _moodScore = 4;
   double _hydrationGlasses = 4; // out of 8
-  int _cognitiveScore = 0;
-  String _wellnessNote = '';
   final _noteController = TextEditingController();
 
   final List<String> _moodLabels = [
@@ -438,7 +432,6 @@ class _SeniorWellnessScreenState extends State<SeniorWellnessScreen> {
         ),
         const SizedBox(height: 12),
         ..._games.asMap().entries.map((entry) {
-          final idx = entry.key;
           final game = entry.value;
           return Container(
             margin: const EdgeInsets.only(bottom: 10),
