@@ -1,0 +1,188 @@
+# =============================================================================
+# Agent Adam — Development Docker Compose
+# =============================================================================
+# Local development environment with all services.
+#
+# Usage:
+#   docker compose up -d              # Start all services
+#   docker compose up -d backend      # Start only backend + dependencies
+#   docker compose logs -f backend    # Follow backend logs
+#   docker compose down -v            # Stop and remove volumes
+# =============================================================================
+
+version: '3.9'
+
+services:
+  # ---- PostgreSQL with pgvector ----
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: agent-adam-postgres
+    environment:
+      POSTGRES_DB: senior_companion
+      POSTGRES_USER: agentadam
+      POSTGRES_PASSWORD: dev_password_change_in_prod
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../backend/prisma/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agentadam -d senior_companion"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agent-adam-net
+
+  # ---- Redis (for BullMQ + caching) ----
+  redis:
+    image: redis:7-alpine
+    container_name: agent-adam-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - agent-adam-net
+
+  # ---- Backend API (Fastify) ----
+  backend:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.backend
+    container_name: agent-adam-backend
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://agentadam:dev_password_change_in_prod@postgres:5432/senior_companion
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev-jwt-secret-change-in-prod
+      JWT_REFRESH_SECRET: dev-refresh-secret-change-in-prod
+      # Voice AI services (set in .env file)
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_PHONE_NUMBER: ${TWILIO_PHONE_NUMBER:-}
+      # Stripe
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../../backend/src:/app/src:ro
+      - ../../backend/prisma:/app/prisma:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - agent-adam-net
+    restart: unless-stopped
+
+  # ---- Nginx Reverse Proxy ----
+  nginx:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile.nginx
+    container_name: agent-adam-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    volumes:
+      - ../nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../../build/web:/usr/share/nginx/html:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - agent-adam-net
+    restart: unless-stopped
+
+  # ---- Prometheus (Metrics) ----
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: agent-adam-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    ports:
+      - "9090:9090"
+    volumes:
+      - prometheus_data:/prometheus
+      - ../monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/prometheus/rules:/etc/prometheus/rules:ro
+    networks:
+      - agent-adam-net
+    restart: unless-stopped
+
+  # ---- Grafana (Dashboards) ----
+  grafana:
+    image: grafana/grafana:11.0.0
+    container_name: agent-adam-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - agent-adam-net
+    restart: unless-stopped
+
+  # ---- BullMQ Dashboard (optional) ----
+  bullboard:
+    image: felixmosh/bull-board:latest
+    container_name: agent-adam-bullboard
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      BULL_PREFIX: bull
+    ports:
+      - "3002:3000"
+    depends_on:
+      - redis
+    networks:
+      - agent-adam-net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    name: agent-adam-postgres-data
+  redis_data:
+    name: agent-adam-redis-data
+  prometheus_data:
+    name: agent-adam-prometheus-data
+  grafana_data:
+    name: agent-adam-grafana-data
+
+networks:
+  agent-adam-net:
+    name: agent-adam-net
+    driver: bridge

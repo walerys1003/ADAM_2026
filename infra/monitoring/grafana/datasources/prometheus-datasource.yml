@@ -1,0 +1,49 @@
+# ─────────────────────────────────────────────────────────────────
+# Agent Adam — Grafana Datasource Configuration
+# SilverTech | June 2026
+# ─────────────────────────────────────────────────────────────────
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    uid: agent-adam-prometheus
+    access: proxy
+    url: http://prometheus-server.monitoring.svc.cluster.local:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: "15s"
+      queryTimeout: "30s"
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        - name: traceID
+          datasourceUid: tempo
+
+  - name: PostgreSQL
+    type: postgres
+    uid: agent-adam-postgres
+    access: proxy
+    url: postgres-agent-adam.agent-adam.svc.cluster.local:5432
+    database: agent_adam
+    user: grafana_reader
+    secureJsonData:
+      password: "${GRAFANA_DB_PASSWORD}"
+    jsonData:
+      sslmode: "disable"
+      postgresVersion: 1600
+      timescaledb: false
+
+  - name: Loki
+    type: loki
+    uid: agent-adam-loki
+    access: proxy
+    url: http://loki.monitoring.svc.cluster.local:3100
+    editable: false
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - datasourceUid: tempo
+          matcherRegex: "trace_id=(\\w+)"
+          name: TraceID
+          url: "$${__value.raw}"

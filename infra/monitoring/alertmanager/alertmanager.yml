@@ -1,0 +1,151 @@
+# ─────────────────────────────────────────────────────────────────
+# Agent Adam — Alertmanager Configuration
+# SilverTech | June 2026
+# ─────────────────────────────────────────────────────────────────
+# Alert routing:
+#   - Critical (semafor RED/PURPLE): SMS + push + email → 5 min
+#   - Warning (ORANGE): email + push → 30 min
+#   - Info (YELLOW): email → 1h
+#   - Infrastructure: on-call → PagerDuty
+# ─────────────────────────────────────────────────────────────────
+
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.sendgrid.net:587'
+  smtp_from: 'alertmanager@silvertech.pl'
+  smtp_auth_username: 'apikey'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+  smtp_require_tls: true
+
+# ─── Templates ─────────────────────────────────────────────────────────
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+# ─── Routing tree ──────────────────────────────────────────────────────
+route:
+  receiver: 'default'
+  group_by: ['alertname', 'severity', 'namespace']
+  group_wait: 10s
+  group_interval: 30s
+  repeat_interval: 1h
+
+  routes:
+    # ─── Semafor CRITICAL alerts (RED/PURPLE) ───────────────────────
+    - match:
+        severity: critical
+        category: semafor
+      receiver: 'senior-critical'
+      group_wait: 0s        # Immediate — no grouping
+      repeat_interval: 5m   # Repeat every 5 min until acknowledged
+
+    # ─── Semafor WARNING alerts (ORANGE) ────────────────────────────
+    - match:
+        severity: warning
+        category: semafor
+      receiver: 'senior-warning'
+      group_wait: 30s
+      repeat_interval: 30m
+
+    # ─── Infrastructure CRITICAL ────────────────────────────────────
+    - match:
+        severity: critical
+        category: infrastructure
+      receiver: 'infra-critical'
+      group_wait: 30s
+      repeat_interval: 15m
+
+    # ─── Voice service degradation ──────────────────────────────────
+    - match:
+        alertname: VoiceServiceDown
+      receiver: 'infra-critical'
+      group_wait: 0s
+      repeat_interval: 5m
+
+    # ─── Database alerts ────────────────────────────────────────────
+    - match:
+        category: database
+      receiver: 'infra-critical'
+      group_wait: 1m
+      repeat_interval: 15m
+
+    # ─── Cost alerts ────────────────────────────────────────────────
+    - match:
+        alertname: DailyCostExceeded
+      receiver: 'admin-alerts'
+      repeat_interval: 4h
+
+# ─── Receivers ─────────────────────────────────────────────────────────
+receivers:
+  # Default — email only
+  - name: 'default'
+    email_configs:
+      - to: 'devops@silvertech.pl'
+        headers:
+          Subject: '[Agent Adam] {{ .GroupLabels.alertname }}'
+
+  # Senior critical — SMS + phone + email
+  - name: 'senior-critical'
+    webhook_configs:
+      - url: 'https://api.agentadam.pl/api/v1/webhooks/alerts/sms'
+        send_resolved: true
+        http_config:
+          authorization:
+            credentials: '${WEBHOOK_SECRET}'
+      - url: 'https://api.agentadam.pl/api/v1/webhooks/alerts/push'
+        send_resolved: true
+        http_config:
+          authorization:
+            credentials: '${WEBHOOK_SECRET}'
+    email_configs:
+      - to: 'emergency@silvertech.pl'
+        headers:
+          Subject: '[CRITICAL] {{ .GroupLabels.alertname }} - {{ .CommonLabels.senior_name }}'
+
+  # Senior warning — email + push
+  - name: 'senior-warning'
+    webhook_configs:
+      - url: 'https://api.agentadam.pl/api/v1/webhooks/alerts/push'
+        send_resolved: true
+        http_config:
+          authorization:
+            credentials: '${WEBHOOK_SECRET}'
+    email_configs:
+      - to: 'care@silvertech.pl'
+        headers:
+          Subject: '[WARNING] {{ .GroupLabels.alertname }} - {{ .CommonLabels.senior_name }}'
+
+  # Infrastructure critical — PagerDuty + email
+  - name: 'infra-critical'
+    pagerduty_configs:
+      - routing_key: '${PAGERDUTY_ROUTING_KEY}'
+        severity: critical
+        description: '{{ .CommonAnnotations.description }}'
+    email_configs:
+      - to: 'oncall@silvertech.pl'
+        headers:
+          Subject: '[INFRA] {{ .GroupLabels.alertname }}'
+
+  # Admin alerts — email only
+  - name: 'admin-alerts'
+    email_configs:
+      - to: 'admin@silvertech.pl'
+        headers:
+          Subject: '[ADMIN] {{ .GroupLabels.alertname }}'
+
+# ─── Inhibition rules ──────────────────────────────────────────────────
+inhibit_rules:
+  # If namespace is down, suppress pod-level alerts
+  - source_match:
+      alertname: KubeNamespaceDown
+    target_match_re:
+      alertname: 'KubePod.*'
+    equal: ['namespace']
+
+  # If critical infrastructure alert fires, suppress warnings
+  - source_match:
+      severity: critical
+      category: infrastructure
+    target_match:
+      severity: warning
+      category: infrastructure
+    equal: ['namespace']

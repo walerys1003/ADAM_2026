@@ -1,0 +1,106 @@
+# ─────────────────────────────────────────────────────────────────
+# Agent Adam — Production Kustomize Overlay
+# SilverTech | June 2026
+# ─────────────────────────────────────────────────────────────────
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: agent-adam
+
+resources:
+  - ../../base
+
+# ─── Production-specific patches ──────────────────────────────────────
+patches:
+  # Increase replicas for production
+  - target:
+      kind: Deployment
+      name: agent-adam-api
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 4
+
+  - target:
+      kind: Deployment
+      name: agent-adam-worker
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3
+
+  # Production resource limits
+  - target:
+      kind: Deployment
+      name: agent-adam-api
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+          limits:
+            cpu: "2000m"
+            memory: "1Gi"
+
+  - target:
+      kind: Deployment
+      name: agent-adam-worker
+    patch: |
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: "300m"
+            memory: "256Mi"
+          limits:
+            cpu: "1000m"
+            memory: "768Mi"
+
+  # Production HPA
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: agent-adam-api-hpa
+    patch: |
+      - op: replace
+        path: /spec/minReplicas
+        value: 4
+      - op: replace
+        path: /spec/maxReplicas
+        value: 20
+
+# ─── ConfigMap generator ──────────────────────────────────────────────
+configMapGenerator:
+  - name: agent-adam-config
+    behavior: merge
+    literals:
+      - NODE_ENV=production
+      - LOG_LEVEL=info
+      - CACHE_TTL=300
+      - VOICE_RATE_LIMIT=20
+      - VOICE_MAX_CONCURRENCY=4
+      - GUARDRAILS_STRICT=true
+      - RAG_TOP_K=5
+      - RAG_SIMILARITY_THRESHOLD=0.75
+      - MAX_CONVERSATION_DURATION=600
+      - SEMAfor_AUTO_ESCALATE=true
+      - DATA_RETENTION_DAYS=365
+      - BACKUP_RETENTION_DAYS=30
+
+# ─── Secret generator ─────────────────────────────────────────────────
+secretGenerator:
+  - name: agent-adam-secrets
+    behavior: merge
+    literals: []
+    # Secrets are injected at deploy time via GitHub Actions
+    # or external secrets operator (Vault, Sealed Secrets)
+
+# ─── Images ───────────────────────────────────────────────────────────
+images:
+  - name: agent-adam-api
+    newName: registry.silvertech.pl/agent-adam-api
+    newTag: latest
+  - name: agent-adam-worker
+    newName: registry.silvertech.pl/agent-adam-worker
+    newTag: latest

@@ -1,0 +1,83 @@
+# =============================================================================
+# Agent Adam Backend — Multi-stage Docker Build
+# =============================================================================
+# Stage 1: Install dependencies & Prisma generate
+# Stage 2: Production runtime (distroless/minimal)
+# =============================================================================
+
+# ---- Stage 1: Builder ----
+FROM node:20-alpine AS builder
+
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    openssl \
+    curl
+
+# Copy package files first for better layer caching
+COPY backend/package*.json ./
+COPY backend/prisma ./prisma
+
+# Install all dependencies (including devDependencies for build)
+RUN npm ci --include=dev && \
+    npm cache clean --force
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Copy application source
+COPY backend/src ./src
+
+# If using TypeScript, uncomment:
+# RUN npm run build
+
+# ---- Stage 2: Production Runtime ----
+FROM node:20-alpine AS production
+
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
+ENV PORT=3000
+ENV HOST=0.0.0.0
+
+# Install runtime dependencies only
+RUN apk add --no-cache \
+    curl \
+    tzdata \
+    ca-certificates
+
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 -G nodejs
+
+# Copy built artifacts from builder
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/package.json ./
+COPY --from=builder --chown=nodejs:nodejs /app/prisma ./prisma
+
+# Copy application source (or built JS if using TypeScript)
+COPY --chown=nodejs:nodejs backend/src ./src
+
+# Copy any additional config files
+COPY --chown=nodejs:nodejs backend/.env.example ./.env.example 2>/dev/null || true
+
+# Expose application port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Switch to non-root user
+USER nodejs
+
+# Start the application
+CMD ["node", "src/app.js"]

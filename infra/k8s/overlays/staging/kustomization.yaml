@@ -1,0 +1,49 @@
+# ─────────────────────────────────────────────────────────────────
+# Agent Adam — Staging Kustomize Overlay
+# SilverTech | June 2026
+# ─────────────────────────────────────────────────────────────────
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: agent-adam-staging
+
+resources:
+  - ../../base
+
+nameSuffix: -staging
+
+patches:
+  - target:
+      kind: Deployment
+      name: agent-adam-api
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: Deployment
+      name: agent-adam-worker
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 1
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: agent-adam-api-hpa
+    patch: |
+      - op: replace
+        path: /spec/minReplicas
+        value: 1
+      - op: replace
+        path: /spec/maxReplicas
+        value: 3
+
+configMapGenerator:
+  - name: agent-adam-config
+    behavior: merge
+    literals:
+      - NODE_ENV=staging
+      - LOG_LEVEL=debug
+      - CACHE_TTL=60
+      - GUARDRAILS_STRICT=false
+      - SEMAfor_AUTO_ESCALATE=false

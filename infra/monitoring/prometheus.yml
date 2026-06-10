@@ -1,0 +1,96 @@
+# SilverTech Agent Adam — Prometheus Configuration
+# June 2026 — Production Monitoring Stack
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+  external_labels:
+    environment: production
+    service: agent-adam
+    region: eu-central
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Rules for alerting
+rule_files:
+  - "alerts/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # ── Prometheus self-monitoring ────────────────────────
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ── Agent Adam Backend API ────────────────────────────
+  - job_name: 'adam-backend'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['adam-backend:3000']
+        labels:
+          component: 'api'
+          language: 'nodejs'
+
+  # ── Node Exporter (system metrics) ────────────────────
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          component: 'system'
+
+  # ── PostgreSQL Exporter ───────────────────────────────
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          component: 'database'
+
+  # ── Redis Exporter ────────────────────────────────────
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+        labels:
+          component: 'cache'
+
+  # ── Nginx Exporter ────────────────────────────────────
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+        labels:
+          component: 'proxy'
+
+  # ── BullMQ Worker Metrics ─────────────────────────────
+  - job_name: 'bullmq-worker'
+    static_configs:
+      - targets: ['adam-worker:3000']
+        labels:
+          component: 'worker'
+
+  # ── Healthchecks.io (SaaS) ────────────────────────────
+  - job_name: 'healthchecks'
+    # This is an external endpoint, only for visibility
+    static_configs:
+      - targets: ['healthchecks.silvertech.ai:443']
+        labels:
+          component: 'monitoring'
+
+# ── Recording Rules for efficient queries ───────────────
+# These pre-compute expensive queries
+# Uncomment and customize as needed
+# groups:
+#   - name: adam_recording_rules
+#     interval: 30s
+#     rules:
+#       - record: job:http_requests_total:rate5m
+#         expr: rate(http_requests_total[5m])
+#       - record: job:voice_call_duration_seconds:avg5m
+#         expr: avg_over_time(voice_call_duration_seconds[5m])
+#       - record: job:api_latency_ms:p95
+#         expr: histogram_quantile(0.95, rate(http_request_duration_ms_bucket[5m]))

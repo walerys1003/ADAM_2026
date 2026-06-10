@@ -1,0 +1,287 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "agent-adam-overview",
+    "title": "Agent Adam — Platform Overview",
+    "description": "Real-time monitoring dashboard for Agent Adam Senior Companion platform. Tracks voice calls, API performance, health alerts, semafor statuses, and infrastructure health.",
+    "tags": ["agent-adam", "silvertech", "senior-companion", "production"],
+    "timezone": "Europe/Warsaw",
+    "schemaVersion": 39,
+    "version": 0,
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Active Voice Calls",
+        "targets": [
+          {
+            "expr": "agent_adam_voice_calls_active",
+            "legendFormat": "Active Calls"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 10, "color": "orange" }, { "value": 20, "color": "red" }] }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Avg Voice Latency (ms)",
+        "targets": [
+          {
+            "expr": "rate(agent_adam_voice_latency_sum{job=\"agent-adam\"}[5m]) / rate(agent_adam_voice_latency_count{job=\"agent-adam\"}[5m])",
+            "legendFormat": "Avg Latency"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 500, "color": "yellow" }, { "value": 1000, "color": "red" }] }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "API Requests/min",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=\"agent-adam\"}[1m]) * 60",
+            "legendFormat": "Req/min"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": { "steps": [{ "value": 0, "color": "blue" }, { "value": 500, "color": "orange" }, { "value": 1000, "color": "red" }] }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Error Rate (%)",
+        "targets": [
+          {
+            "expr": "(sum(rate(http_requests_total{job=\"agent-adam\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"agent-adam\"}[5m]))) * 100",
+            "legendFormat": "Error Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2,
+            "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 1, "color": "orange" }, { "value": 5, "color": "red" }] }
+          }
+        }
+      },
+      {
+        "id": 10,
+        "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+        "type": "timeseries",
+        "title": "Voice Call Volume (5m rate)",
+        "targets": [
+          {
+            "expr": "rate(agent_adam_voice_calls_total[5m])",
+            "legendFormat": "Voice Calls"
+          },
+          {
+            "expr": "rate(agent_adam_voice_errors_total[5m])",
+            "legendFormat": "Voice Errors"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": { "lineInterpolation": "smooth", "fillOpacity": 15 }
+          }
+        }
+      },
+      {
+        "id": 11,
+        "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+        "type": "timeseries",
+        "title": "API Latency (p50/p95/p99)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(http_request_duration_seconds_bucket{job=\"agent-adam\"}[5m]))",
+            "legendFormat": "p50"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=\"agent-adam\"}[5m]))",
+            "legendFormat": "p95"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{job=\"agent-adam\"}[5m]))",
+            "legendFormat": "p99"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "s", "custom": { "lineInterpolation": "smooth" } }
+        }
+      },
+      {
+        "id": 20,
+        "gridPos": { "x": 0, "y": 12, "w": 8, "h": 6 },
+        "type": "bargauge",
+        "title": "Semafor Distribution",
+        "targets": [
+          {
+            "expr": "agent_adam_semafor_status",
+            "legendFormat": "{{level}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 1, "color": "yellow" },
+                { "value": 2, "color": "orange" },
+                { "value": 3, "color": "red" },
+                { "value": 4, "color": "purple" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 21,
+        "gridPos": { "x": 8, "y": 12, "w": 8, "h": 6 },
+        "type": "stat",
+        "title": "Today's Conversation Cost ($)",
+        "targets": [
+          {
+            "expr": "increase(agent_adam_conversation_cost_dollars[24h])",
+            "legendFormat": "Daily Cost"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD",
+            "decimals": 2,
+            "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 1, "color": "semi-dark-yellow" }, { "value": 2, "color": "red" }] }
+          }
+        }
+      },
+      {
+        "id": 22,
+        "gridPos": { "x": 16, "y": 12, "w": 8, "h": 6 },
+        "type": "stat",
+        "title": "Cache Hit Rate",
+        "targets": [
+          {
+            "expr": "(sum(rate(cache_hits_total[5m])) / (sum(rate(cache_hits_total[5m])) + sum(rate(cache_misses_total[5m])))) * 100",
+            "legendFormat": "Hit Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 1,
+            "thresholds": { "steps": [{ "value": 0, "color": "red" }, { "value": 60, "color": "orange" }, { "value": 85, "color": "green" }] }
+          }
+        }
+      },
+      {
+        "id": 30,
+        "gridPos": { "x": 0, "y": 18, "w": 12, "h": 8 },
+        "type": "timeseries",
+        "title": "Pod Resource Usage",
+        "targets": [
+          {
+            "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"agent-adam\",container!=\"\"}[5m])) by (pod)",
+            "legendFormat": "{{pod}} CPU"
+          }
+        ]
+      },
+      {
+        "id": 31,
+        "gridPos": { "x": 12, "y": 18, "w": 12, "h": 8 },
+        "type": "timeseries",
+        "title": "Pod Memory Usage",
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{namespace=\"agent-adam\",container!=\"\"}",
+            "legendFormat": "{{pod}} Memory"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "bytes" }
+        }
+      },
+      {
+        "id": 40,
+        "gridPos": { "x": 0, "y": 26, "w": 8, "h": 6 },
+        "type": "stat",
+        "title": "Database Connections",
+        "targets": [
+          {
+            "expr": "pg_stat_database_numbackends{datname=\"agent_adam\"}",
+            "legendFormat": "PG Connections"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 50, "color": "orange" }, { "value": 80, "color": "red" }] }
+          }
+        }
+      },
+      {
+        "id": 41,
+        "gridPos": { "x": 8, "y": 26, "w": 8, "h": 6 },
+        "type": "stat",
+        "title": "Redis Memory Usage",
+        "targets": [
+          {
+            "expr": "redis_memory_used_bytes / 1024 / 1024",
+            "legendFormat": "Redis MB"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "MB",
+            "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 256, "color": "orange" }, { "value": 512, "color": "red" }] }
+          }
+        }
+      },
+      {
+        "id": 42,
+        "gridPos": { "x": 16, "y": 26, "w": 8, "h": 6 },
+        "type": "stat",
+        "title": "BullMQ Queue Size",
+        "targets": [
+          {
+            "expr": "agent_adam_bullmq_waiting_total",
+            "legendFormat": "Waiting Jobs"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": { "steps": [{ "value": 0, "color": "green" }, { "value": 100, "color": "yellow" }, { "value": 500, "color": "orange" }, { "value": 1000, "color": "red" }] }
+          }
+        }
+      },
+      {
+        "id": 50,
+        "gridPos": { "x": 0, "y": 32, "w": 24, "h": 6 },
+        "type": "table",
+        "title": "Recent Alerts",
+        "targets": [
+          {
+            "expr": "ALERTS{namespace=\"agent-adam\"}",
+            "format": "table"
+          }
+        ]
+      }
+    ],
+    "time": { "from": "now-1h", "to": "now" }
+  }
+}

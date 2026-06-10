@@ -1,0 +1,174 @@
+# ─────────────────────────────────────────────────────────────────
+# Agent Adam — Prometheus Alert Rules
+# SilverTech | June 2026
+# ─────────────────────────────────────────────────────────────────
+groups:
+  - name: agent-adam-service
+    rules:
+      # ─── Service availability ──────────────────────────────────
+      - alert: ServiceDown
+        expr: up{job="agent-adam"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Agent Adam API is DOWN"
+          description: "Service {{ $labels.instance }} has been down for more than 2 minutes."
+
+      - alert: HighErrorRate
+        expr: (sum(rate(http_requests_total{job="agent-adam",status=~"5.."}[5m])) / sum(rate(http_requests_total{job="agent-adam"}[5m]))) * 100 > 5
+        for: 5m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "High API error rate: {{ $value | humanize }}%"
+          description: "Error rate above 5% threshold for 5 minutes."
+
+      # ─── Voice service ─────────────────────────────────────────
+      - alert: VoiceServiceDegraded
+        expr: rate(agent_adam_voice_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          category: voice
+        annotations:
+          summary: "Voice service degraded"
+          description: "Voice error rate is {{ $value }} per second."
+
+      - alert: VoiceLatencyHigh
+        expr: histogram_quantile(0.95, rate(agent_adam_voice_latency_bucket[5m])) > 1.5
+        for: 10m
+        labels:
+          severity: warning
+          category: voice
+        annotations:
+          summary: "High voice latency: p95 > 1.5s"
+          description: "Voice processing p95 latency is {{ $value }}s."
+
+      # ─── Semafor alerts ────────────────────────────────────────
+      - alert: SeniorSemaforRed
+        expr: agent_adam_semafor_status{level="RED"} > 0
+        for: 1m
+        labels:
+          severity: critical
+          category: semafor
+        annotations:
+          summary: "RED semafor: {{ $labels.senior_name }}"
+          description: "Senior {{ $labels.senior_name }} ({{ $labels.senior_id }}) has RED semafor status. Immediate action required."
+
+      - alert: SeniorSemaforPurple
+        expr: agent_adam_semafor_status{level="PURPLE"} > 0
+        for: 30s
+        labels:
+          severity: critical
+          category: semafor
+        annotations:
+          summary: "🚨 PURPLE (LIFE THREATENING): {{ $labels.senior_name }}"
+          description: "LIFE-THREATENING alert for {{ $labels.senior_name }}! Emergency services automatically notified."
+
+      - alert: SeniorSemaforOrange
+        expr: agent_adam_semafor_status{level="ORANGE"} > 0
+        for: 5m
+        labels:
+          severity: warning
+          category: semafor
+        annotations:
+          summary: "ORANGE semafor: {{ $labels.senior_name }}"
+          description: "Senior {{ $labels.senior_name }} has ORANGE semafor for 5 minutes. Requires attention."
+
+      # ─── Database ──────────────────────────────────────────────
+      - alert: DatabaseConnectionsHigh
+        expr: pg_stat_database_numbackends{datname="agent_adam"} > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Database connections approaching limit"
+          description: "{{ $value }} active connections to agent_adam database."
+
+      - alert: DatabaseDown
+        expr: pg_up{job="postgresql"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "PostgreSQL database is DOWN"
+          description: "Database has been unreachable for 2 minutes."
+
+      # ─── Redis ─────────────────────────────────────────────────
+      - alert: RedisDown
+        expr: redis_up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Redis is DOWN"
+          description: "Redis instance {{ $labels.instance }} is unreachable."
+
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "Redis memory usage high: {{ $value | humanize }}%"
+          description: "Redis memory approaching max. Consider scaling."
+
+      # ─── BullMQ ────────────────────────────────────────────────
+      - alert: BullMQQueueBacklog
+        expr: agent_adam_bullmq_waiting_total > 500
+        for: 10m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "BullMQ job queue backlog: {{ $value }} waiting"
+          description: "Too many unprocessed jobs. Check worker health."
+
+      # ─── Resource alerts ───────────────────────────────────────
+      - alert: PodCPUHigh
+        expr: sum(rate(container_cpu_usage_seconds_total{namespace="agent-adam"}[5m])) by (pod) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "High CPU on {{ $labels.pod }}"
+          description: "Pod {{ $labels.pod }} using {{ $value | humanize }} CPU."
+
+      - alert: PodMemoryHigh
+        expr: container_memory_usage_bytes{namespace="agent-adam"} / container_spec_memory_limit_bytes{namespace="agent-adam"} * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          category: infrastructure
+        annotations:
+          summary: "High memory on {{ $labels.pod }}"
+          description: "Pod memory at {{ $value | humanize }}% of limit."
+
+      # ─── Cost alerts ───────────────────────────────────────────
+      - alert: DailyCostExceeded
+        expr: increase(agent_adam_conversation_cost_dollars[24h]) + increase(agent_adam_infra_cost_dollars[24h]) > 45
+        for: 5m
+        labels:
+          severity: warning
+          category: cost
+        annotations:
+          summary: "Daily cost exceeding threshold: ${{ $value | humanize }}"
+          description: "24h cost above $45. Monthly projection may exceed $1,250 budget."
+
+      - alert: PerConversationCostHigh
+        expr: rate(agent_adam_conversation_cost_dollars[1h]) / rate(agent_adam_voice_calls_total[1h]) > 0.15
+        for: 15m
+        labels:
+          severity: info
+          category: cost
+        annotations:
+          summary: "Per-conversation cost above $0.15"
+          description: "Average cost is ${{ $value }}/conversation (target: $0.114)."

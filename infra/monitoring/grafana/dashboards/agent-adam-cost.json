@@ -1,0 +1,135 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "agent-adam-cost",
+    "title": "Agent Adam — Cost Analysis",
+    "description": "Cost tracking dashboard: conversation costs, API usage, infrastructure costs, and budget vs actuals.",
+    "tags": ["agent-adam", "cost", "finops"],
+    "timezone": "Europe/Warsaw",
+    "schemaVersion": 39,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Today's Cost",
+        "targets": [
+          { "expr": "increase(agent_adam_conversation_cost_dollars[24h]) + increase(agent_adam_infra_cost_dollars[24h])", "legendFormat": "Total" }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD",
+            "decimals": 2,
+            "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 30 }, { "color": "orange", "value": 40 }, { "color": "red", "value": 50 }] }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "gridPos": { "x": 6, "y": 0, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Month-to-Date",
+        "targets": [
+          { "expr": "increase(agent_adam_conversation_cost_dollars[30d]) + increase(agent_adam_infra_cost_dollars[30d])", "legendFormat": "MTD" }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD",
+            "decimals": 2,
+            "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 800 }, { "color": "orange", "value": 1000 }, { "color": "red", "value": 1250 }] }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Cost/Conversation",
+        "targets": [
+          { "expr": "rate(agent_adam_conversation_cost_dollars[1h]) / rate(agent_adam_voice_calls_total[1h])", "legendFormat": "$/conv" }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD",
+            "decimals": 4,
+            "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 0.1 }, { "color": "red", "value": 0.15 }] }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+        "type": "stat",
+        "title": "Budget Remaining",
+        "targets": [
+          { "expr": "1250 - (increase(agent_adam_conversation_cost_dollars[30d]) + increase(agent_adam_infra_cost_dollars[30d]))", "legendFormat": "Remaining" }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD",
+            "decimals": 2,
+            "thresholds": { "steps": [{ "color": "red", "value": 0 }, { "color": "yellow", "value": 200 }, { "color": "green", "value": 500 }] }
+          }
+        }
+      },
+      {
+        "id": 10,
+        "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+        "type": "timeseries",
+        "title": "Daily Cost Breakdown",
+        "targets": [
+          { "expr": "increase(agent_adam_conversation_cost_dollars[1d])", "legendFormat": "Conversation Cost" },
+          { "expr": "increase(agent_adam_stt_cost_dollars[1d])", "legendFormat": "STT (Deepgram)" },
+          { "expr": "increase(agent_adam_llm_cost_dollars[1d])", "legendFormat": "LLM (Gemini)" },
+          { "expr": "increase(agent_adam_tts_cost_dollars[1d])", "legendFormat": "TTS (OpenAI)" },
+          { "expr": "increase(agent_adam_infra_cost_dollars[1d])", "legendFormat": "Infrastructure" }
+        ],
+        "fieldConfig": {
+          "defaults": { "unit": "USD", "custom": { "stacking": { "mode": "normal" } } }
+        }
+      },
+      {
+        "id": 11,
+        "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+        "type": "gauge",
+        "title": "Monthly Budget ($1,250 target)",
+        "targets": [
+          { "expr": "increase(agent_adam_conversation_cost_dollars[30d]) + increase(agent_adam_infra_cost_dollars[30d])", "legendFormat": "Spent" }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "USD",
+            "max": 1250,
+            "thresholds": { "steps": [{ "color": "green", "value": 0 }, { "color": "yellow", "value": 800 }, { "color": "orange", "value": 1000 }, { "color": "red", "value": 1250 }] }
+          }
+        }
+      },
+      {
+        "id": 20,
+        "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+        "type": "timeseries",
+        "title": "API Cost per Model",
+        "targets": [
+          { "expr": "rate(agent_adam_stt_cost_dollars[5m]) * 3600", "legendFormat": "STT ($/h)" },
+          { "expr": "rate(agent_adam_llm_cost_dollars[5m]) * 3600", "legendFormat": "LLM ($/h)" },
+          { "expr": "rate(agent_adam_tts_cost_dollars[5m]) * 3600", "legendFormat": "TTS ($/h)" },
+          { "expr": "rate(agent_adam_rag_cost_dollars[5m]) * 3600", "legendFormat": "RAG ($/h)" }
+        ],
+        "fieldConfig": { "defaults": { "unit": "USD" } }
+      },
+      {
+        "id": 21,
+        "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+        "type": "table",
+        "title": "Top Seniors by Cost",
+        "targets": [
+          {
+            "expr": "topk(10, sum by (senior_id) (rate(agent_adam_conversation_cost_dollars[24h])))",
+            "format": "table"
+          }
+        ]
+      }
+    ]
+  }
+}

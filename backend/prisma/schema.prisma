@@ -1,0 +1,458 @@
+/// SilverTech Agent Adam — Prisma Schema
+/// PostgreSQL + pgvector extension for RAG
+/// June 2026 optimized
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions", "fullTextSearch"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector", schema: "extensions")]
+}
+
+/// ── USERS & AUTH ──────────────────────────────────────
+model User {
+  id            String     @id @default(uuid())
+  email         String     @unique
+  passwordHash  String     @map("password_hash")
+  role          UserRole   @default(SENIOR)
+  seniorProfile Senior?    @relation("UserSenior")
+  familyProfile Family?    @relation("UserFamily")
+  adminProfile  Admin?     @relation("UserAdmin")
+  
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  lastLoginAt   DateTime?  @map("last_login_at")
+  
+  refreshTokens RefreshToken[]
+  
+  @@map("users")
+}
+
+enum UserRole {
+  SENIOR
+  FAMILY
+  ADMIN
+  SUPERADMIN
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("refresh_tokens")
+}
+
+/// ── SENIORS ───────────────────────────────────────────
+model Senior {
+  id              String        @id @default(uuid())
+  userId          String?       @unique @map("user_id")
+  firstName       String        @map("first_name")
+  lastName        String        @map("last_name")
+  phone           String?
+  email           String?
+  birthDate       DateTime?     @map("birth_date")
+  pesel           String?
+  
+  address         String?
+  city            String?
+  postalCode      String?       @map("postal_code")
+  
+  // Health profile
+  medicalConditions String?     @map("medical_conditions")
+  allergies         String?
+  bloodType         String?     @map("blood_type")
+  primaryDoctor     String?     @map("primary_doctor")
+  doctorPhone       String?     @map("doctor_phone")
+  
+  // Emergency contacts
+  emergencyContact1  String?    @map("emergency_contact_1")
+  emergencyPhone1    String?    @map("emergency_phone_1")
+  emergencyRelation1 String?    @map("emergency_relation_1")
+  emergencyContact2  String?    @map("emergency_contact_2")
+  emergencyPhone2    String?    @map("emergency_phone_2")
+  emergencyRelation2 String?    @map("emergency_relation_2")
+  
+  // Semafor status
+  semaforLevel      SemaforLevel @default(GREEN) @map("semafor_level")
+  lastHealthCheck   DateTime?    @map("last_health_check")
+  lastConversation  DateTime?    @map("last_conversation")
+  
+  // Package
+  package        PackageTier @default(KONTAKT)
+  packageActiveUntil DateTime? @map("package_active_until")
+  
+  // Wearable
+  wearableDeviceId   String? @map("wearable_device_id")
+  wearableModel      String? @map("wearable_model")
+  wearableConnected  Boolean @default(false) @map("wearable_connected")
+  lastWearableSync   DateTime? @map("last_wearable_sync")
+  
+  // Voice preferences
+  voiceSpeed    Float?   @default(1.0) @map("voice_speed")
+  voicePitch    Float?   @default(1.0) @map("voice_pitch")
+  voiceVolume   Float?   @default(1.0) @map("voice_volume")
+  preferredName String?  @map("preferred_name")
+  
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  
+  user              User?            @relation("UserSenior", fields: [userId], references: [id])
+  familyMembers     Family[]         @relation("FamilySenior")
+  conversations     Conversation[]
+  healthRecords     HealthRecord[]
+  medications       Medication[]
+  medicationAdherence MedicationAdherence[]
+  alerts            Alert[]
+  marketplaceOrders MarketplaceOrder[]
+  
+  @@map("seniors")
+}
+
+enum SemaforLevel {
+  GREEN
+  YELLOW
+  ORANGE
+  RED
+  PURPLE
+}
+
+enum PackageTier {
+  KONTAKT
+  ZDROWIE
+  AKTYWNY
+}
+
+/// ── FAMILY MEMBERS ────────────────────────────────────
+model Family {
+  id          String   @id @default(uuid())
+  userId      String?  @unique @map("user_id")
+  firstName   String   @map("first_name")
+  lastName    String   @map("last_name")
+  phone       String?
+  email       String?
+  seniorId    String   @map("senior_id")
+  relation    String   // córka, syn, wnuk, opiekun...
+  
+  canViewHealth     Boolean @default(true) @map("can_view_health")
+  canViewConversations Boolean @default(false) @map("can_view_conversations")
+  receiveAlerts     Boolean @default(true) @map("receive_alerts")
+  receiveReports    Boolean @default(true) @map("receive_reports")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  user   User?  @relation("UserFamily", fields: [userId], references: [id])
+  senior Senior @relation("FamilySenior", fields: [seniorId], references: [id])
+  
+  @@map("family_members")
+}
+
+/// ── ADMINS ────────────────────────────────────────────
+model Admin {
+  id        String   @id @default(uuid())
+  userId    String?  @unique @map("user_id")
+  firstName String   @map("first_name")
+  lastName  String   @map("last_name")
+  role      AdminRole @default(OPERATOR)
+  
+  permissions     Json?  // Granular permissions map
+  lastActiveAt    DateTime? @map("last_active_at")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  user      User?    @relation("UserAdmin", fields: [userId], references: [id])
+  auditLogs AuditLog[]
+  
+  @@map("admins")
+}
+
+enum AdminRole {
+  OPERATOR
+  MANAGER
+  DIRECTOR
+  SUPERADMIN
+}
+
+/// ── CONVERSATIONS ─────────────────────────────────────
+model Conversation {
+  id          String    @id @default(uuid())
+  seniorId    String    @map("senior_id")
+  callSid     String?   @map("call_sid")  // Twilio SID
+  
+  duration    Int       @default(0)  // in seconds
+  transcript  Json?     // Array of transcript messages
+  
+  // Metadata
+  moodScore   Float?    @map("mood_score")     // 1-5
+  topicsDetected String? @map("topics_detected") // comma-separated
+  semaforBefore SemaforLevel? @map("semafor_before")
+  semaforAfter  SemaforLevel? @map("semafor_after")
+  
+  // Cost tracking
+  costStt    Float?     @default(0) @map("cost_stt")
+  costLlm    Float?     @default(0) @map("cost_llm")
+  costTts    Float?     @default(0) @map("cost_tts")
+  costTwilio Float?     @default(0) @map("cost_twilio")
+  costTotal  Float?     @default(0) @map("cost_total")
+  
+  // Retrieval
+  documentsRetrieved Int? @map("documents_retrieved")
+  vectorSearchMs     Float? @map("vector_search_ms")
+  llmResponseMs      Float? @map("llm_response_ms")
+  
+  isEmergency Boolean @default(false) @map("is_emergency")
+  isCompleted Boolean @default(false) @map("is_completed")
+  hangupReason String? @map("hangup_reason")
+  
+  startedAt  DateTime  @map("started_at")
+  endedAt    DateTime? @map("ended_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  
+  senior Senior @relation(fields: [seniorId], references: [id])
+  
+  @@index([seniorId, startedAt])
+  @@index([moodScore])
+  @@map("conversations")
+}
+
+/// ── HEALTH RECORDS ────────────────────────────────────
+model HealthRecord {
+  id          String   @id @default(uuid())
+  seniorId    String   @map("senior_id")
+  
+  heartRate   Int?     @map("heart_rate")
+  restingHr   Int?     @map("resting_heart_rate")
+  steps       Int?     
+  spo2        Float?   
+  temperature Float?   
+  sleepHours  Float?   @map("sleep_hours")
+  sleepQuality Int?    @map("sleep_quality")
+  
+  deviceName  String?  @map("device_name")
+  source      String   @default("wearable") // wearable, manual, sensor
+  
+  recordedAt  DateTime @map("recorded_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  senior Senior @relation(fields: [seniorId], references: [id])
+  
+  @@index([seniorId, recordedAt])
+  @@map("health_records")
+}
+
+/// ── MEDICATIONS ───────────────────────────────────────
+model Medication {
+  id          String   @id @default(uuid())
+  seniorId    String   @map("senior_id")
+  name        String
+  dosage      String
+  frequency   String   // daily, twice_daily, weekly, as_needed
+  timeOfDay   String?  @map("time_of_day") // JSON array: ["08:00", "20:00"]
+  
+  instructions String?
+  prescribedBy String?  @map("prescribed_by")
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime? @map("end_date")
+  
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  senior      Senior   @relation(fields: [seniorId], references: [id])
+  adherence   MedicationAdherence[]
+  
+  @@map("medications")
+}
+
+model MedicationAdherence {
+  id           String   @id @default(uuid())
+  medicationId String   @map("medication_id")
+  seniorId     String   @map("senior_id")
+  
+  scheduledFor DateTime @map("scheduled_for")
+  takenAt      DateTime? @map("taken_at")
+  isTaken      Boolean  @default(false) @map("is_taken")
+  isSkipped    Boolean  @default(false) @map("is_skipped")
+  skipReason   String?  @map("skip_reason")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  medication Medication @relation(fields: [medicationId], references: [id])
+  senior     Senior     @relation(fields: [seniorId], references: [id])
+  
+  @@index([seniorId, scheduledFor])
+  @@index([medicationId, scheduledFor])
+  @@map("medication_adherence")
+}
+
+/// ── ALERTS / INCIDENTS ────────────────────────────────
+model Alert {
+  id          String       @id @default(uuid())
+  seniorId    String       @map("senior_id")
+  
+  type        AlertType
+  severity    SemaforLevel
+  title       String
+  description String?
+  
+  isResolved  Boolean      @default(false) @map("is_resolved")
+  resolvedBy  String?      @map("resolved_by")
+  resolvedAt  DateTime?    @map("resolved_at")
+  resolution  String?
+  
+  createdAt   DateTime     @default(now()) @map("created_at")
+  
+  senior Senior @relation(fields: [seniorId], references: [id])
+  
+  @@index([seniorId, createdAt])
+  @@index([severity, isResolved])
+  @@map("alerts")
+}
+
+enum AlertType {
+  SOS_EMERGENCY
+  HEALTH_ANOMALY
+  MISSED_MEDICATION
+  WEARABLE_DISCONNECTED
+  MOOD_DECLINE
+  SYSTEM_ERROR
+  PACKAGE_EXPIRY
+  VOICE_QUALITY_DEGRADED
+}
+
+/// ── MARKETPLACE ORDERS ────────────────────────────────
+model MarketplaceOrder {
+  id          String   @id @default(uuid())
+  seniorId    String   @map("senior_id")
+  
+  serviceType String   @map("service_type")
+  serviceName String   @map("service_name")
+  provider    String?
+  
+  status      OrderStatus @default(PENDING)
+  scheduledDate DateTime? @map("scheduled_date")
+  
+  price       Float?
+  notes       String?
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  senior Senior @relation(fields: [seniorId], references: [id])
+  
+  @@map("marketplace_orders")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+/// ── AUDIT LOG ─────────────────────────────────────────
+model AuditLog {
+  id        String   @id @default(uuid())
+  adminId   String?  @map("admin_id")
+  action    String
+  entity    String
+  entityId  String?  @map("entity_id")
+  details   Json?
+  ipAddress String?  @map("ip_address")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  admin Admin? @relation(fields: [adminId], references: [id])
+  
+  @@index([adminId, createdAt])
+  @@index([entity, action])
+  @@map("audit_logs")
+}
+
+/// ── VECTOR EMBEDDINGS (RAG) ───────────────────────────
+model DocumentEmbedding {
+  id        String   @id @default(uuid())
+  content   String
+  embedding Unsupported("vector(1536)")
+  metadata  Json?
+  source    String?  // file, manual, web
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@map("document_embeddings")
+}
+
+/// ── BLOG POSTS (Landing Page) ─────────────────────────
+model BlogPost {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String
+  coverImage  String?  @map("cover_image")
+  
+  author      String   @default("Zespół SilverTech")
+  category    String
+  tags        String[] @default([])
+  
+  isPublished Boolean  @default(false) @map("is_published")
+  publishedAt DateTime? @map("published_at")
+  
+  seoTitle       String? @map("seo_title")
+  seoDescription String? @map("seo_description")
+  seoKeywords    String? @map("seo_keywords")
+  
+  viewCount      Int     @default(0) @map("view_count")
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  @@index([slug])
+  @@index([category, isPublished])
+  @@map("blog_posts")
+}
+
+/// ── CONTACT FORM SUBMISSIONS ──────────────────────────
+model ContactSubmission {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@map("contact_submissions")
+}
+
+/// ── ANALYTICS EVENTS ──────────────────────────────────
+model AnalyticsEvent {
+  id        String   @id @default(uuid())
+  event     String
+  category  String
+  label     String?
+  value     Float?
+  metadata  Json?
+  userId    String?  @map("user_id")
+  sessionId String?  @map("session_id")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@index([event, createdAt])
+  @@index([category, createdAt])
+  @@map("analytics_events")
+}
